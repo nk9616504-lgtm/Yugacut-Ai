@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>YugaCut AI Pro — Free Mobile &amp; Desktop Video Editor (No Watermark)</title>
+  <meta name="description" content="YugaCut AI Pro: YouCut-style video editor with Trim, Split, 2 Audio Tracks (Music + Voiceover), Text-to-Speech, Drag &amp; Drop Text/Stickers/PIP, Adjust, Effects, Voice Changer &amp; Export." />
+  <meta name="theme-color" content="#0b0d17" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    html, body { background: #0b0d17; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; overscroll-behavior: none; }
+    .yc-toolbar::-webkit-scrollbar { display: none; }
+    .yc-toolbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .yc-tool-btn.active { color: #fb923c; background: rgba(251, 146, 60, 0.16); border-color: rgba(251, 146, 60, 0.55); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between select-none">
+
+  <!-- TOP HEADER BAR -->
+  <header class="sticky top-0 z-40 bg-[#111424]/95 backdrop-blur border-b border-slate-800 px-3 py-2 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center font-extrabold text-slate-950 text-sm shadow">Y</div>
+      <div>
+        <div class="text-sm font-extrabold text-white leading-none">YugaCut <span class="text-orange-400">AI Pro</span></div>
+        <div class="text-[9px] text-slate-400 font-bold tracking-wider uppercase">No Watermark • Full Editor</div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      <select id="ycRatioSelect" onchange="setYcAspectRatio(this.value)" class="rounded-lg bg-[#1a1f36] border border-slate-700 px-2 py-1.5 text-[11px] font-bold text-slate-200">
+        <option value="9:16">9:16 Reels</option>
+        <option value="16:9">16:9 YouTube</option>
+        <option value="1:1">1:1 Square</option>
+      </select>
+      <button type="button" id="ycSaveBtn" onclick="exportYugaCutVideo()" class="bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-extrabold px-3.5 py-1.5 rounded-xl text-xs shadow-lg">
+        SAVE
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col items-center justify-between max-w-3xl w-full mx-auto px-3 py-2.5 gap-2">
+    <!-- PREVIEW STAGE -->
+    <div class="w-full flex flex-col items-center justify-center flex-1 min-h-[220px]">
+      <div id="ycStageWrap" class="relative bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-2xl flex items-center justify-center" style="width:210px;height:373px;">
+        <canvas id="ycPreviewCanvas" width="540" height="960" class="w-full h-full object-contain touch-none cursor-move"></canvas>
+        <div id="ycEmptyOverlay" onclick="document.getElementById('ycVideoInput').click()" class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#111424]/90 cursor-pointer p-4 text-center">
+          <div class="w-14 h-14 rounded-full bg-orange-500/20 border border-orange-500/50 text-orange-400 flex items-center justify-center text-2xl">+</div>
+          <div class="text-xs font-extrabold text-white">Tap to Add Video</div>
+          <div class="text-[10px] text-slate-400">Drag Text / Stickers / PIP directly on video!</div>
+        </div>
+        <div id="ycExportOverlay" class="hidden absolute inset-0 bg-black/85 flex flex-col items-center justify-center gap-2 p-4 text-center">
+          <div class="text-sm font-extrabold text-orange-400">🎬 Rendering Video + Audio...</div>
+          <div id="ycExportPct" class="text-xl font-extrabold text-white">0%</div>
+          <div class="text-[10px] text-slate-400">Please keep this screen open</div>
+        </div>
+      </div>
+
+      <video id="ycSourceVideo" class="hidden" playsinline crossorigin="anonymous"></video>
+      <audio id="ycSourceBgm" class="hidden" crossorigin="anonymous"></audio>
+      <audio id="ycSourceVoice" class="hidden" crossorigin="anonymous"></audio>
+      <input id="ycVideoInput" type="file" accept="video/*,image/*" onchange="loadYcVideoFile(event)" class="hidden" />
+      <input id="ycBgmInput" type="file" accept="audio/*" onchange="loadYcAudioTrack('bgm', event)" class="hidden" />
+      <input id="ycVoiceInput" type="file" accept="audio/*" onchange="loadYcAudioTrack('voice', event)" class="hidden" />
+      <input id="ycPipInput" type="file" accept="image/*" onchange="loadYcPipImage(event)" class="hidden" />
+
+      <!-- Transport + Undo/Redo + Fullscreen -->
+      <div class="w-full flex items-center justify-between px-1 pt-2 text-xs">
+        <div class="flex items-center gap-1.5">
+          <button type="button" onclick="undoYcAction()" title="Undo" class="p-2 rounded-lg bg-[#161a2e] text-slate-300 hover:text-white"><i class="fa-solid fa-rotate-left"></i></button>
+          <button type="button" onclick="redoYcAction()" title="Redo" class="p-2 rounded-lg bg-[#161a2e] text-slate-300 hover:text-white"><i class="fa-solid fa-rotate-right"></i></button>
+          <button type="button" onclick="seekYcToStart()" class="p-2 rounded-lg bg-[#161a2e] text-slate-300 hover:text-white"><i class="fa-solid fa-backward-step"></i></button>
+          <button type="button" id="ycPlayBtn" onclick="toggleYcPlay()" class="w-9 h-9 rounded-full bg-orange-500 text-slate-950 font-extrabold flex items-center justify-center shadow"><i class="fa-solid fa-play"></i></button>
+          <button type="button" id="ycMuteVidBtn" onclick="toggleYcMuteOrig()" class="px-2 py-1.5 rounded-lg bg-[#161a2e] border border-slate-700 text-[10px] font-bold text-slate-200">🔊 Orig</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="ycTimeReadout" class="font-mono text-[11px] text-slate-300 font-bold">0.0s / 0.0s</span>
+          <button type="button" onclick="toggleYcFullscreen()" class="p-2 rounded-lg bg-[#161a2e] text-slate-300"><i class="fa-solid fa-expand"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVE TOOL DRAWER -->
+    <div id="ycToolPanel" class="w-full bg-[#13172b] border border-slate-800 rounded-2xl p-3 text-xs space-y-2">
+      <!-- TRIM / SPLIT -->
+      <div id="ycPaneTrim" class="space-y-2">
+        <div class="flex justify-between font-bold text-orange-300">
+          <span>✂️ Trim &amp; Split Clip</span>
+          <span id="ycTrimRangeLbl">0.0s – Full</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-[10px] text-slate-400">Start</label><input id="ycTrimStart" type="range" min="0" max="60" step="0.1" value="0" oninput="updateYcTrim()" class="w-full accent-orange-500" /></div>
+          <div><label class="text-[10px] text-slate-400">End</label><input id="ycTrimEnd" type="range" min="0" max="60" step="0.1" value="60" oninput="updateYcTrim()" class="w-full accent-orange-500" /></div>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="splitYcAtPlayhead()" class="px-3 py-1 rounded-lg bg-[#1c223c] border border-slate-700 font-bold">✂️ Split at Playhead</button>
+          <button type="button" onclick="addYcMarker()" class="px-3 py-1 rounded-lg bg-[#1c223c] border border-slate-700 font-bold">🚩 Add Marker</button>
+        </div>
+      </div>
+
+      <!-- 2-TRACK MUSIC & VOICEOVER -->
+      <div id="ycPaneMusic" class="hidden space-y-2">
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="document.getElementById('ycBgmInput').click()" class="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold">+ Track 1: Music</button>
+          <button type="button" onclick="document.getElementById('ycVoiceInput').click()" class="px-3 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-extrabold">+ Track 2: Voiceover</button>
+          <button type="button" id="ycMicRecBtn" onclick="toggleYcMicRecord()" class="px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 font-extrabold">🎙️ Record Voice</button>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-[10px]">
+          <div><label class="text-slate-400 block">Orig: <span id="ycOrigVolLbl">100%</span></label><input id="ycOrigVol" type="range" min="0" max="1" step="0.05" value="1" oninput="updateYcAudioMix()" class="w-full accent-orange-500" /></div>
+          <div><label class="text-slate-400 block">Music: <span id="ycBgmVolLbl">70%</span></label><input id="ycBgmVol" type="range" min="0" max="1" step="0.05" value="0.7" oninput="updateYcAudioMix()" class="w-full accent-amber-400" /></div>
+          <div><label class="text-slate-400 block">Voice: <span id="ycVoiceVolLbl">100%</span></label><input id="ycVoiceVol" type="range" min="0" max="1" step="0.05" value="1" oninput="updateYcAudioMix()" class="w-full accent-cyan-400" /></div>
+        </div>
+      </div>
+
+      <!-- FILTER & ADJUST & EFFECTS -->
+      <div id="ycPaneFilter" class="hidden space-y-2">
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="setYcFilter('none', this)" class="yc-flt-btn px-2.5 py-1 rounded-lg bg-orange-500 text-slate-950 font-extrabold">Normal</button>
+          <button type="button" onclick="setYcFilter('vivid', this)" class="yc-flt-btn px-2.5 py-1 rounded-lg bg-[#1b2038] font-bold">Vivid</button>
+          <button type="button" onclick="setYcFilter('cinema', this)" class="yc-flt-btn px-2.5 py-1 rounded-lg bg-[#1b2038] font-bold">Cinema</button>
+          <button type="button" onclick="setYcFilter('warm', this)" class="yc-flt-btn px-2.5 py-1 rounded-lg bg-[#1b2038] font-bold">Warm</button>
+          <button type="button" onclick="setYcFilter('bw', this)" class="yc-flt-btn px-2.5 py-1 rounded-lg bg-[#1b2038] font-bold">B&amp;W</button>
+          <button type="button" onclick="setYcEffect('vignette')" class="px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-200 font-bold">✨ Vignette FX</button>
+          <button type="button" onclick="setYcEffect('zoom')" class="px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-200 font-bold">🔍 Pulse FX</button>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-[10px]">
+          <div><label class="text-slate-400">Brightness</label><input id="ycAdjBright" type="range" min="50" max="150" value="100" oninput="drawYcFrame()" class="w-full accent-orange-500" /></div>
+          <div><label class="text-slate-400">Contrast</label><input id="ycAdjContrast" type="range" min="50" max="160" value="100" oninput="drawYcFrame()" class="w-full accent-orange-500" /></div>
+          <div><label class="text-slate-400">Saturate</label><input id="ycAdjSat" type="range" min="0" max="200" value="100" oninput="drawYcFrame()" class="w-full accent-orange-500" /></div>
+        </div>
+      </div>
+
+      <!-- MULTI-TEXT LAYER + FONT + ANIMATION + TTS -->
+      <div id="ycPaneText" class="hidden space-y-2">
+        <div class="flex flex-wrap gap-1.5">
+          <input id="ycOverlayText" type="text" oninput="updateActiveTextLayer()" placeholder="Type text (drag on video to move)..." class="flex-1 min-w-[150px] rounded-xl bg-[#0b0e1c] border border-slate-700 px-3 py-1.5 text-white" />
+          <button type="button" onclick="addYcTextLayer()" class="px-2.5 py-1.5 rounded-xl bg-orange-500 text-slate-950 font-extrabold">T+ Add</button>
+          <button type="button" onclick="speakYcActiveText()" class="px-2.5 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">🗣️ TTS</button>
+          <button type="button" onclick="copyActiveYcLayer()" class="px-2.5 py-1.5 rounded-xl bg-indigo-500/20 text-indigo-300 font-bold">📋 Copy</button>
+          <button type="button" onclick="deleteActiveYcLayer()" class="px-2.5 py-1.5 rounded-xl bg-rose-500/20 text-rose-300 font-bold">🗑️</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5 text-[10px]">
+          <select id="ycTextFont" onchange="updateActiveTextLayer()" class="rounded-lg bg-[#0b0e1c] border border-slate-700 px-2 py-1 text-white">
+            <option value="sans-serif">Aa Sans</option>
+            <option value="serif">Aa Serif</option>
+            <option value="monospace">Aa Mono</option>
+            <option value="Impact, sans-serif">Aa Impact</option>
+          </select>
+          <select id="ycTextAnim" onchange="updateActiveTextLayer()" class="rounded-lg bg-[#0b0e1c] border border-slate-700 px-2 py-1 text-white">
+            <option value="none">No Anim</option>
+            <option value="pulse">Pulse</option>
+            <option value="bounce">Bounce</option>
+          </select>
+          <input id="ycTextColor" type="color" value="#fde047" onchange="updateActiveTextLayer()" class="w-full h-7 rounded-lg bg-transparent border border-slate-700" />
+          <input id="ycTextSize" type="range" min="18" max="72" value="32" oninput="updateActiveTextLayer()" class="w-full accent-orange-500" />
+        </div>
+      </div>
+
+      <!-- STICKER & PIP -->
+      <div id="ycPaneSticker" class="hidden space-y-2">
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="addYcStickerLayer('▶ SUBSCRIBE')" class="px-2.5 py-1 rounded-xl bg-rose-600/25 border border-rose-500/40 text-rose-200 font-extrabold">▶ SUBSCRIBE</button>
+          <button type="button" onclick="addYcStickerLayer('🔔 BELL ICON')" class="px-2.5 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 font-extrabold">🔔 BELL</button>
+          <button type="button" onclick="addYcStickerLayer('👍 LIKE & SHARE')" class="px-2.5 py-1 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-200 font-extrabold">👍 LIKE</button>
+          <button type="button" onclick="document.getElementById('ycPipInput').click()" class="px-2.5 py-1 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-200 font-extrabold">🖼️ + Add PIP Photo</button>
+          <button type="button" onclick="clearAllYcLayers()" class="px-2.5 py-1 rounded-xl bg-slate-800 text-slate-300 font-bold">✕ Clear All</button>
+        </div>
+      </div>
+
+      <!-- TRANSFORM: ROTATE, FLIP, CROP/ZOOM, BG, ENHANCE -->
+      <div id="ycPaneTransform" class="hidden space-y-2">
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="rotateYcVideo()" class="px-2.5 py-1.5 rounded-lg bg-[#1b2038] font-bold">🔄 Rotate 90°</button>
+          <button type="button" onclick="flipYcVideo('h')" class="px-2.5 py-1.5 rounded-lg bg-[#1b2038] font-bold">↔️ Flip H</button>
+          <button type="button" onclick="flipYcVideo('v')" class="px-2.5 py-1.5 rounded-lg bg-[#1b2038] font-bold">↕️ Flip V</button>
+          <button type="button" id="ycEnhanceBtn" onclick="toggleYcEnhance()" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">✨ HD Enhance</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[10px]">
+          <div><label class="text-slate-400">Crop / Zoom: <span id="ycZoomLbl">100%</span></label><input id="ycCropZoom" type="range" min="100" max="180" value="100" oninput="updateYcZoom()" class="w-full accent-orange-500" /></div>
+          <div><label class="text-slate-400 block">Background (BG)</label><input id="ycBgColor" type="color" value="#000000" onchange="drawYcFrame()" class="w-full h-7 rounded-lg bg-transparent border border-slate-700" /></div>
+        </div>
+      </div>
+
+      <!-- CAPTIONS / SUBTITLES -->
+      <div id="ycPaneCaptions" class="hidden space-y-2">
+        <div class="flex flex-wrap gap-1.5 items-center justify-between">
+          <span class="font-bold text-orange-300">💬 Captions / Subtitles (1 Line per 3s)</span>
+          <button type="button" onclick="clearYcCaptions()" class="text-[10px] text-rose-300 font-bold">✕ Clear</button>
+        </div>
+        <textarea id="ycCaptionsInput" rows="2" oninput="drawYcFrame()" placeholder="Line 1 (0-3s)&#10;Line 2 (3-6s)..." class="w-full rounded-xl bg-[#0b0e1c] border border-slate-700 px-3 py-1.5 text-white text-xs"></textarea>
+      </div>
+
+      <!-- SPEED & VOICE CHANGER -->
+      <div id="ycPaneSpeed" class="hidden space-y-2">
+        <div class="flex justify-between font-bold text-orange-300"><span>⚡ Speed &amp; Voice Pitch</span><span id="ycSpeedLbl">1.0x</span></div>
+        <div class="flex gap-1.5">
+          <button type="button" onclick="setYcSpeed(0.5)" class="flex-1 py-1.5 rounded-lg bg-[#1b2038] font-bold">0.5x</button>
+          <button type="button" onclick="setYcSpeed(0.75)" class="flex-1 py-1.5 rounded-lg bg-[#1b2038] font-bold">0.75x</button>
+          <button type="button" onclick="setYcSpeed(1.0)" class="flex-1 py-1.5 rounded-lg bg-orange-500 text-slate-950 font-extrabold">1.0x</button>
+          <button type="button" onclick="setYcSpeed(1.5)" class="flex-1 py-1.5 rounded-lg bg-[#1b2038] font-bold">1.5x</button>
+          <button type="button" onclick="setYcSpeed(2.0)" class="flex-1 py-1.5 rounded-lg bg-[#1b2038] font-bold">2.0x</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- YOUCUT-STYLE ICON TOOLBAR -->
+    <div class="yc-toolbar w-full flex items-center gap-2 overflow-x-auto py-1">
+      <button type="button" id="ycBtnTrim" onclick="switchYcTool('trim')" class="yc-tool-btn active shrink-0 px-3 py-2 rounded-xl border border-slate-800 bg-[#14182b] flex flex-col items-center gap-1 text-[10px] font-extrabold"><i class="fa-solid fa-scissors text-sm"></i><span>TRIM/SPLIT</span></button>
+      <button type="button" id="ycBtnMusic" onclick="switchYcTool('music')" class="yc-tool-btn shrink-0 px-3 py-2 rounded-xl border border-slate-800 bg-[#14182b] flex flex-col items-center gap-1 text-[10px] font-extrabold text-slate-300"><i class="fa-solid fa-music text-sm"></i><span>MUSIC/REC</span></button>
+      <button type="button" id="ycBtnFilter" onclick="switchYcTool('filter')" class="yc-tool-btn shrink-0 px-3 py-2 rounded-xl border border-slate-800 bg-[#14182b] flex flex-col items-center gap-1 text-[10px] font-extrabold text-slate-300"><i class="fa-solid fa-wand-magic-sparkles text-sm"></i><span>FILTER/FX</span></button>
+      <button type="button" id="ycBtnText" onclick="switchYcTool('text')" class="yc-tool-btn shrink-0 px-3 py-2 rounded-xl border border-slate-800 bg-[#14182b] flex flex-col items-center gap-1 text-[10px] font-extrabold text-slate-300"><i class="fa-solid fa-font text-sm"></i><span>TEXT/TTS</span></button>
+      <button type="button" id="ycBtnSticker" onclick="switchYcTool('sticker')" class="yc-tool-btn shrink-0 px-3 py-2 rounded-xl border border-slate-800 bg-[#14182b] flex flex-col items-center gap-1 text-[10px] font-extrabold text-slate-300"><i class="fa-regular fa-face-smile text-sm"></i><span>STICKER/PIP</span></button>
+      <button type="button" id="ycBtnSpeed" onclick="switchYcTool('speed')" class="yc-tool-btn shrink-0 px-3 py-2 rounded-xl border border-slate-800 bg-[#14182b] flex flex-col items-center gap-1 text-[10px] font-extrabold text-slate-300"><i class="fa-solid fa-gauge-high text-sm"></i><span>SPEED</span></button>
+      <button type="button" id="ycBtnTransform" onclick="switchYcTool('transform')" class="yc-tool-btn shrink-0 px-3 py-2 rounded-xl border border-slate-800 bg-[#14182b] flex flex-col items-center gap-1 text-[10px] font-extrabold text-slate-300"><i class="fa-solid fa-crop-simple text-sm"></i><span>ROTATE/BG</span></button>
+      <button type="button" id="ycBtnCaptions" onclick="switchYcTool('captions')" class="yc-tool-btn shrink-0 px-3 py-2 rounded-xl border border-slate-800 bg-[#14182b] flex flex-col items-center gap-1 text-[10px] font-extrabold text-slate-300"><i class="fa-solid fa-closed-captioning text-sm"></i><span>CAPTIONS</span></button>
+      <button type="button" onclick="document.getElementById('ycVideoInput').click()" class="shrink-0 px-3 py-2 rounded-xl border border-orange-500/40 bg-orange-500/15 text-orange-300 flex flex-col items-center gap-1 text-[10px] font-extrabold"><i class="fa-solid fa-plus text-sm"></i><span>NEW CLIP</span></button>
+    </div>
+
+    <!-- VISUAL MULTI-TRACK TIMELINE -->
+    <div class="w-full bg-[#101324] border border-slate-800 rounded-2xl p-2.5 relative space-y-1 text-[10px]">
+      <div id="ycTimelineTextTrack" class="h-4 rounded bg-emerald-500/20 border border-emerald-500/35 px-2 flex items-center text-emerald-300 font-bold truncate">Tt Text / Sticker / PIP Layers (0)</div>
+      <div id="ycTimelineBgmTrack" class="h-4 rounded bg-amber-500/20 border border-amber-500/35 px-2 flex items-center text-amber-300 font-bold truncate">🎵 Track 1: Music</div>
+      <div id="ycTimelineVoiceTrack" class="h-4 rounded bg-cyan-500/20 border border-cyan-500/35 px-2 flex items-center text-cyan-300 font-bold truncate">🎙️ Track 2: Voiceover</div>
+      <div class="h-7 rounded-lg bg-indigo-950/60 border border-indigo-500/35 relative overflow-hidden flex items-center px-2 font-bold text-indigo-200">
+        <div id="ycTimelineActiveFill" class="absolute inset-y-0 left-0 bg-orange-500/30 border-x-2 border-orange-400" style="width:100%;"></div>
+        <span class="relative z-10" id="ycMarkerLbl">🎬 Video Clip Timeline</span>
+      </div>
+      <div id="ycPlayheadLine" class="absolute top-1 bottom-1 w-0.5 bg-orange-500 pointer-events-none" style="left:10px;"></div>
+    </div>
+  </main>
+
+  <div id="ycToast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-orange-500 text-slate-950 font-extrabold text-xs px-4 py-2 rounded-full shadow-xl"></div>
+
+  <script>
+    const ycVid = document.getElementById("ycSourceVideo");
+    const ycBgm = document.getElementById("ycSourceBgm");
+    const ycVoice = document.getElementById("ycSourceVoice");
+    const ycCanvas = document.getElementById("ycPreviewCanvas");
+    const ycCtx = ycCanvas.getContext("2d");
+
+    let ycFilterCss = "none", ycEffectMode = "none", ycRotDeg = 0, ycFlipH = 1, ycFlipV = 1, ycZoomPct = 100, ycEnhanceOn = false;
+    let ycTrimS = 0, ycTrimE = 60, ycSpeedVal = 1.0, ycOrigMuted = false;
+    let ycLayers = []; // { type: 'text'|'sticker'|'pip', text, x, y, color, font, size, anim, img }
+    let ycActiveIdx = -1, ycDragIdx = -1;
+    let ycUndoStack = [], ycRedoStack = [];
+    let ycRafId = null, ycMicRec = null, ycMicChunks = [], ycMicActive = false;
+
+    const YC_FILTER_MAP = {
+      none: "none",
+      vivid: "contrast(1.2) saturate(1.3)",
+      cinema: "contrast(1.18) saturate(0.85) sepia(0.18)",
+      warm: "sepia(0.45) brightness(1.06)",
+      bw: "grayscale(1) contrast(1.2)"
+    };
+
+    function showYcToast(msg) {
+      const t = document.getElementById("ycToast");
+      if (!t) return;
+      t.textContent = msg; t.classList.remove("hidden");
+      setTimeout(() => t.classList.add("hidden"), 2500);
+    }
+
+    function pushYcUndo() {
+      ycUndoStack.push(JSON.stringify(ycLayers.map(l => ({ ...l, img: null }))));
+      if (ycUndoStack.length > 20) ycUndoStack.shift();
+      ycRedoStack = [];
+    }
+    function undoYcAction() {
+      if (!ycUndoStack.length) return showYcToast("Nothing to undo");
+      ycRedoStack.push(JSON.stringify(ycLayers.map(l => ({ ...l, img: null }))));
+      ycLayers = JSON.parse(ycUndoStack.pop());
+      ycActiveIdx = ycLayers.length - 1;
+      updateLayerTimelineText(); drawYcFrame();
+    }
+    function redoYcAction() {
+      if (!ycRedoStack.length) return showYcToast("Nothing to redo");
+      ycUndoStack.push(JSON.stringify(ycLayers.map(l => ({ ...l, img: null }))));
+      ycLayers = JSON.parse(ycRedoStack.pop());
+      ycActiveIdx = ycLayers.length - 1;
+      updateLayerTimelineText(); drawYcFrame();
+    }
+
+    function setYcAspectRatio(r) {
+      const wrap = document.getElementById("ycStageWrap");
+      if (r === "9:16") { ycCanvas.width = 540; ycCanvas.height = 960; wrap.style.width = "210px"; wrap.style.height = "373px"; }
+      else if (r === "16:9") { ycCanvas.width = 960; ycCanvas.height = 540; wrap.style.width = "320px"; wrap.style.height = "180px"; }
+      else { ycCanvas.width = 720; ycCanvas.height = 720; wrap.style.width = "250px"; wrap.style.height = "250px"; }
+      drawYcFrame();
+    }
+
+    function switchYcTool(tool) {
+      const map = { trim: ["ycPaneTrim","ycBtnTrim"], music: ["ycPaneMusic","ycBtnMusic"], filter: ["ycPaneFilter","ycBtnFilter"], text: ["ycPaneText","ycBtnText"], sticker: ["ycPaneSticker","ycBtnSticker"], speed: ["ycPaneSpeed","ycBtnSpeed"], transform: ["ycPaneTransform","ycBtnTransform"], captions: ["ycPaneCaptions","ycBtnCaptions"] };
+      Object.entries(map).forEach(([k, [pid, bid]]) => {
+        document.getElementById(pid)?.classList.toggle("hidden", k !== tool);
+        document.getElementById(bid)?.classList.toggle("active", k === tool);
+      });
+      const capLines = (document.getElementById("ycCaptionsInput")?.value || "").split("\n").map(s => s.trim()).filter(Boolean);
+      if (capLines.length) {
+        const capIdx = Math.floor((ycVid.currentTime || 0) / 3) % capLines.length;
+        const cap = capLines[capIdx];
+        ycCtx.save();
+        ycCtx.font = "800 26px sans-serif"; ycCtx.textAlign = "center";
+        const cw = ycCtx.measureText(cap).width + 28;
+        ycCtx.fillStyle = "rgba(0,0,0,0.72)"; ycCtx.fillRect((w - cw) / 2, h * 0.86, cw, 38);
+        ycCtx.fillStyle = "#ffffff"; ycCtx.fillText(cap, w / 2, h * 0.86 + 27);
+        ycCtx.restore();
+      }
+    }
+
+    let ycPhotoModeImg = null;
+    function loadYcVideoFile(e) {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      if (f.type.startsWith("image/")) {
+        const im = new Image();
+        im.onload = () => {
+          ycPhotoModeImg = im;
+          ycVid.removeAttribute("src");
+          document.getElementById("ycEmptyOverlay")?.classList.add("hidden");
+          ycTrimS = 0; ycTrimE = 5;
+          document.getElementById("ycTrimStart").max = 15; document.getElementById("ycTrimStart").value = 0;
+          document.getElementById("ycTrimEnd").max = 15; document.getElementById("ycTrimEnd").value = 5;
+          updateYcTrim(); drawYcFrame();
+          showYcToast("🖼️ Photo loaded as 5s clip!");
+        };
+        im.src = URL.createObjectURL(f);
+        return;
+      }
+      ycPhotoModeImg = null;
+      ycVid.src = URL.createObjectURL(f);
+      ycVid.onloadedmetadata = () => {
+        document.getElementById("ycEmptyOverlay")?.classList.add("hidden");
+        const dur = ycVid.duration || 10;
+        ycTrimS = 0; ycTrimE = dur;
+        document.getElementById("ycTrimStart").max = dur; document.getElementById("ycTrimStart").value = 0;
+        document.getElementById("ycTrimEnd").max = dur; document.getElementById("ycTrimEnd").value = dur;
+        updateYcTrim(); ycVid.currentTime = 0; drawYcFrame();
+      };
+    }
+
+    function loadYcAudioTrack(which, e) {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      if (which === "bgm") { ycBgm.src = url; document.getElementById("ycTimelineBgmTrack").textContent = "🎵 " + f.name; }
+      else { ycVoice.src = url; document.getElementById("ycTimelineVoiceTrack").textContent = "🎙️ " + f.name; }
+      updateYcAudioMix();
+    }
+
+    async function toggleYcMicRecord() {
+      const btn = document.getElementById("ycMicRecBtn");
+      if (!ycMicActive) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          ycMicChunks = []; ycMicRec = new MediaRecorder(stream);
+          ycMicRec.ondataavailable = e => { if (e.data.size > 0) ycMicChunks.push(e.data); };
+          ycMicRec.onstop = () => {
+            stream.getTracks().forEach(t => t.stop());
+            ycVoice.src = URL.createObjectURL(new Blob(ycMicChunks, { type: "audio/webm" }));
+            document.getElementById("ycTimelineVoiceTrack").textContent = "🎙️ Recorded Voiceover";
+            if (btn) btn.textContent = "🎙️ Record Voice";
+            showYcToast("✅ Voiceover added to Track 2!");
+          };
+          ycMicRec.start(); ycMicActive = true;
+          if (btn) btn.textContent = "⏹️ Stop Rec";
+        } catch (e) { showYcToast("⚠️ Mic permission denied"); }
+      } else {
+        ycMicActive = false;
+        if (ycMicRec && ycMicRec.state !== "inactive") ycMicRec.stop();
+      }
+    }
+
+    function updateYcTrim() {
+      let s = parseFloat(document.getElementById("ycTrimStart").value || 0);
+      let e = parseFloat(document.getElementById("ycTrimEnd").value || 0);
+      if (e <= s + 0.2) e = Math.min(ycVid.duration || 60, s + 0.5);
+      ycTrimS = s; ycTrimE = e;
+      document.getElementById("ycTrimRangeLbl").textContent = `${s.toFixed(1)}s – ${e.toFixed(1)}s`;
+      const dur = Math.max(0.1, ycVid.duration || 1);
+      const fill = document.getElementById("ycTimelineActiveFill");
+      if (fill) { fill.style.left = ((s / dur) * 100) + "%"; fill.style.width = (((e - s) / dur) * 100) + "%"; }
+      if (ycVid.currentTime < s || ycVid.currentTime > e) ycVid.currentTime = s;
+      drawYcFrame();
+    }
+
+    function splitYcAtPlayhead() {
+      document.getElementById("ycTrimStart").value = ycVid.currentTime || 0;
+      updateYcTrim(); showYcToast("✂️ Split start set to " + (ycVid.currentTime || 0).toFixed(1) + "s");
+    }
+    function addYcMarker() {
+      document.getElementById("ycMarkerLbl").textContent = `🎬 Timeline • 🚩 ${(ycVid.currentTime || 0).toFixed(1)}s`;
+      showYcToast("🚩 Marker placed!");
+    }
+
+    function toggleYcMuteOrig() {
+      ycOrigMuted = !ycOrigMuted; ycVid.muted = ycOrigMuted;
+      document.getElementById("ycMuteVidBtn").textContent = ycOrigMuted ? "🔇 Orig" : "🔊 Orig";
+    }
+    function updateYcAudioMix() {
+      const ov = parseFloat(document.getElementById("ycOrigVol").value || 1);
+      const bv = parseFloat(document.getElementById("ycBgmVol").value || 0.7);
+      const vv = parseFloat(document.getElementById("ycVoiceVol").value || 1);
+      ycVid.volume = ov; ycBgm.volume = bv; ycVoice.volume = vv;
+      document.getElementById("ycOrigVolLbl").textContent = Math.round(ov * 100) + "%";
+      document.getElementById("ycBgmVolLbl").textContent = Math.round(bv * 100) + "%";
+      document.getElementById("ycVoiceVolLbl").textContent = Math.round(vv * 100) + "%";
+    }
+
+    function setYcFilter(key, btn) {
+      ycFilterCss = YC_FILTER_MAP[key] || "none";
+      document.querySelectorAll(".yc-flt-btn").forEach(b => { b.className = "yc-flt-btn px-2.5 py-1 rounded-lg bg-[#1b2038] font-bold"; });
+      if (btn) btn.className = "yc-flt-btn px-2.5 py-1 rounded-lg bg-orange-500 text-slate-950 font-extrabold";
+      drawYcFrame();
+    }
+    function setYcEffect(fx) { ycEffectMode = (ycEffectMode === fx) ? "none" : fx; drawYcFrame(); showYcToast("FX: " + ycEffectMode); }
+
+    function updateLayerTimelineText() {
+      document.getElementById("ycTimelineTextTrack").textContent = `Tt Text / Sticker / PIP Layers (${ycLayers.length})`;
+    }
+    function addYcTextLayer() {
+      pushYcUndo();
+      const txt = (document.getElementById("ycOverlayText")?.value || "YugaCut AI").trim();
+      ycLayers.push({
+        type: "text", text: txt, x: 0.5, y: 0.8,
+        color: document.getElementById("ycTextColor")?.value || "#fde047",
+        font: document.getElementById("ycTextFont")?.value || "sans-serif",
+        size: Number(document.getElementById("ycTextSize")?.value || 32),
+        anim: document.getElementById("ycTextAnim")?.value || "none"
+      });
+      ycActiveIdx = ycLayers.length - 1;
+      updateLayerTimelineText(); drawYcFrame();
+    }
+    function updateActiveTextLayer() {
+      if (ycActiveIdx < 0 || !ycLayers[ycActiveIdx]) addYcTextLayer();
+      const l = ycLayers[ycActiveIdx];
+      if (!l || l.type !== "text") return;
+      l.text = document.getElementById("ycOverlayText")?.value || "";
+      l.color = document.getElementById("ycTextColor")?.value || "#fde047";
+      l.font = document.getElementById("ycTextFont")?.value || "sans-serif";
+      l.size = Number(document.getElementById("ycTextSize")?.value || 32);
+      l.anim = document.getElementById("ycTextAnim")?.value || "none";
+      drawYcFrame();
+    }
+    function speakYcActiveText() {
+      const t = document.getElementById("ycOverlayText")?.value || "";
+      if (!t || !("speechSynthesis" in window)) return showYcToast("⚠️ Type text first!");
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = /[\u0B80-\u0BFF]/.test(t) ? "ta-IN" : "en-IN";
+      window.speechSynthesis.speak(u);
+    }
+    function addYcStickerLayer(txt) {
+      pushYcUndo();
+      ycLayers.push({ type: "sticker", text: txt, x: 0.5, y: 0.14, size: 26 });
+      ycActiveIdx = ycLayers.length - 1;
+      updateLayerTimelineText(); drawYcFrame();
+    }
+    function loadYcPipImage(e) {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      const im = new Image();
+      im.onload = () => {
+        pushYcUndo();
+        ycLayers.push({ type: "pip", img: im, x: 0.78, y: 0.22, size: 130 });
+        ycActiveIdx = ycLayers.length - 1;
+        updateLayerTimelineText(); drawYcFrame();
+      };
+      im.src = URL.createObjectURL(f);
+    }
+    function copyActiveYcLayer() {
+      if (ycActiveIdx < 0 || !ycLayers[ycActiveIdx]) return showYcToast("⚠️ Select a layer first");
+      pushYcUndo();
+      const orig = ycLayers[ycActiveIdx];
+      ycLayers.push({ ...orig, x: Math.min(0.9, orig.x + 0.05), y: Math.min(0.9, orig.y + 0.05) });
+      ycActiveIdx = ycLayers.length - 1;
+      updateLayerTimelineText(); drawYcFrame();
+      showYcToast("📋 Layer Copied!");
+    }
+    function deleteActiveYcLayer() {
+      if (ycActiveIdx < 0) return;
+      pushYcUndo(); ycLayers.splice(ycActiveIdx, 1); ycActiveIdx = ycLayers.length - 1;
+      updateLayerTimelineText(); drawYcFrame();
+    }
+    function clearAllYcLayers() { pushYcUndo(); ycLayers = []; ycActiveIdx = -1; updateLayerTimelineText(); drawYcFrame(); }
+    function setYcSpeed(spd) { ycSpeedVal = spd; ycVid.playbackRate = spd; document.getElementById("ycSpeedLbl").textContent = spd + "x"; }
+
+    // Drag & Drop Layers directly on Canvas
+    function getCanvasNormPos(e) {
+      const r = ycCanvas.getBoundingClientRect();
+      const pt = e.touches ? e.touches[0] : e;
+      return { nx: (pt.clientX - r.left) / r.width, ny: (pt.clientY - r.top) / r.height };
+    }
+    ycCanvas.addEventListener("pointerdown", e => {
+      const { nx, ny } = getCanvasNormPos(e);
+      let best = -1, minD = 0.16;
+      ycLayers.forEach((l, i) => {
+        const d = Math.hypot(l.x - nx, l.y - ny);
+        if (d < minD) { minD = d; best = i; }
+      });
+      ycDragIdx = best;
+      if (best >= 0) ycActiveIdx = best;
+    });
+    ycCanvas.addEventListener("pointermove", e => {
+      if (ycDragIdx < 0 || !ycLayers[ycDragIdx]) return;
+      const { nx, ny } = getCanvasNormPos(e);
+      ycLayers[ycDragIdx].x = Math.min(0.95, Math.max(0.05, nx));
+      ycLayers[ycDragIdx].y = Math.min(0.95, Math.max(0.05, ny));
+      drawYcFrame();
+    });
+    window.addEventListener("pointerup", () => { ycDragIdx = -1; });
+
+    function drawYcFrame() {
+      const w = ycCanvas.width, h = ycCanvas.height;
+      ycCtx.fillStyle = document.getElementById("ycBgColor")?.value || "#000000"; ycCtx.fillRect(0, 0, w, h);
+      const br = document.getElementById("ycAdjBright")?.value || 100;
+      const ct = document.getElementById("ycAdjContrast")?.value || 100;
+      const st = document.getElementById("ycAdjSat")?.value || 100;
+      const combFilter = `${ycFilterCss === "none" ? "" : ycFilterCss} brightness(${br}%) contrast(${ct}%) saturate(${st}%)`.trim();
+
+      if (ycPhotoModeImg) {
+        ycCtx.save();
+        ycCtx.filter = combFilter + (ycEnhanceOn ? " contrast(1.15) saturate(1.15) brightness(1.04)" : "");
+        const pulseZ = ycEffectMode === "zoom" ? (1 + 0.05 * Math.sin(Date.now() / 220)) : 1;
+        const iw = ycPhotoModeImg.width || w, ih = ycPhotoModeImg.height || h;
+        const scale = Math.min(w / iw, h / ih) * (ycZoomPct / 100) * pulseZ;
+        const dw = iw * scale, dh = ih * scale;
+        ycCtx.translate(w / 2, h / 2);
+        ycCtx.rotate((ycRotDeg * Math.PI) / 180);
+        ycCtx.scale(ycFlipH, ycFlipV);
+        ycCtx.drawImage(ycPhotoModeImg, -dw / 2, -dh / 2, dw, dh);
+        ycCtx.restore();
+      } else if (ycVid.readyState >= 2) {
+        ycCtx.save();
+        ycCtx.filter = combFilter + (ycEnhanceOn ? " contrast(1.15) saturate(1.15) brightness(1.04)" : "");
+        const pulseZ = ycEffectMode === "zoom" ? (1 + 0.05 * Math.sin(Date.now() / 220)) : 1;
+        const vw = ycVid.videoWidth || w, vh = ycVid.videoHeight || h;
+        const scale = Math.min(w / vw, h / vh) * (ycZoomPct / 100) * pulseZ;
+        const dw = vw * scale, dh = vh * scale;
+        ycCtx.translate(w / 2, h / 2);
+        ycCtx.rotate((ycRotDeg * Math.PI) / 180);
+        ycCtx.scale(ycFlipH, ycFlipV);
+        ycCtx.drawImage(ycVid, -dw / 2, -dh / 2, dw, dh);
+        ycCtx.restore();
+      }
+      if (ycEffectMode === "vignette") {
+        const g = ycCtx.createRadialGradient(w/2, h/2, w*0.25, w/2, h/2, w*0.75);
+        g.addColorStop(0, "transparent"); g.addColorStop(1, "rgba(0,0,0,0.65)");
+        ycCtx.fillStyle = g; ycCtx.fillRect(0, 0, w, h);
+      }
+
+      ycLayers.forEach(l => {
+        const lx = l.x * w, ly = l.y * h;
+        if (l.type === "pip" && l.img) {
+          ycCtx.drawImage(l.img, lx - l.size/2, ly - l.size/2, l.size, l.size);
+        } else if (l.type === "sticker") {
+          ycCtx.save();
+          ycCtx.font = `800 ${l.size}px sans-serif`; ycCtx.textAlign = "center";
+          const sw = ycCtx.measureText(l.text).width + 28;
+          ycCtx.fillStyle = "#dc2626"; ycCtx.fillRect(lx - sw/2, ly - 22, sw, 40);
+          ycCtx.fillStyle = "#ffffff"; ycCtx.fillText(l.text, lx, ly + 7);
+          ycCtx.restore();
+        } else if (l.type === "text" && l.text) {
+          ycCtx.save();
+          const pulse = l.anim === "pulse" ? (1 + 0.08 * Math.sin(Date.now()/180)) : 1;
+          const dy = l.anim === "bounce" ? Math.sin(Date.now()/180) * 8 : 0;
+          ycCtx.translate(lx, ly + dy); ycCtx.scale(pulse, pulse);
+          ycCtx.font = `800 ${l.size}px ${l.font || "sans-serif"}`; ycCtx.textAlign = "center";
+          const tw = ycCtx.measureText(l.text).width + 26;
+          ycCtx.fillStyle = "rgba(0,0,0,0.62)"; ycCtx.fillRect(-tw/2, -l.size*0.85, tw, l.size*1.2);
+          ycCtx.fillStyle = l.color || "#fde047"; ycCtx.fillText(l.text, 0, 0);
+          ycCtx.restore();
+        }
+      });
+    }
+
+    function tickYcPlayback() {
+      if (!ycVid.paused) {
+        if (ycVid.currentTime >= ycTrimE) { ycVid.currentTime = ycTrimS; if (ycBgm.src) ycBgm.currentTime = 0; if (ycVoice.src) ycVoice.currentTime = 0; }
+        drawYcFrame();
+        const dur = Math.max(0.1, ycVid.duration || 1);
+        document.getElementById("ycTimeReadout").textContent = `${ycVid.currentTime.toFixed(1)}s / ${dur.toFixed(1)}s`;
+        document.getElementById("ycPlayheadLine").style.left = (10 + (ycVid.currentTime / dur) * 90) + "%";
+        ycRafId = requestAnimationFrame(tickYcPlayback);
+      }
+    }
+
+    function seekYcToStart() { ycVid.currentTime = ycTrimS; if (ycBgm.src) ycBgm.currentTime = 0; if (ycVoice.src) ycVoice.currentTime = 0; drawYcFrame(); }
+    function toggleYcFullscreen() { const el = document.getElementById("ycStageWrap"); if (el && el.requestFullscreen) el.requestFullscreen().catch(() => {}); }
+
+    function toggleYcPlay() {
+      if (!ycVid.src) return document.getElementById("ycVideoInput").click();
+      const btn = document.getElementById("ycPlayBtn");
+      if (ycVid.paused) {
+        if (ycVid.currentTime < ycTrimS || ycVid.currentTime >= ycTrimE) ycVid.currentTime = ycTrimS;
+        ycVid.playbackRate = ycSpeedVal; ycVid.play();
+        if (ycBgm.src) { ycBgm.currentTime = 0; ycBgm.play().catch(() => {}); }
+        if (ycVoice.src) { ycVoice.currentTime = 0; ycVoice.play().catch(() => {}); }
+        btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+        tickYcPlayback();
+      } else {
+        ycVid.pause(); if (ycBgm.src) ycBgm.pause(); if (ycVoice.src) ycVoice.pause();
+        btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+        if (ycRafId) cancelAnimationFrame(ycRafId);
+      }
+    }
+
+    async function exportYugaCutVideo() {
+      if (!ycVid.src) return showYcToast("⚠️ Please add a video clip first!");
+      const ov = document.getElementById("ycExportOverlay"), pctEl = document.getElementById("ycExportPct");
+      ov.classList.remove("hidden");
+      ycVid.pause(); if (ycBgm.src) ycBgm.pause(); if (ycVoice.src) ycVoice.pause();
+      ycVid.currentTime = ycTrimS; ycVid.playbackRate = ycSpeedVal;
+      try {
+        const stream = ycCanvas.captureStream(30);
+        const rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+        const chunks = [];
+        rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        rec.onstop = () => {
+          ov.classList.add("hidden");
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob(chunks, { type: "video/webm" }));
+          a.download = "YugaCut_AI_Pro_Video.webm"; a.click();
+          showYcToast("🎬 Video Saved!");
+        };
+        rec.start(); ycVid.play();
+        if (ycBgm.src) { ycBgm.currentTime = 0; ycBgm.play().catch(() => {}); }
+        if (ycVoice.src) { ycVoice.currentTime = 0; ycVoice.play().catch(() => {}); }
+        const total = Math.max(0.5, ycTrimE - ycTrimS);
+        const loop = () => {
+          if (ycVid.currentTime >= ycTrimE || ycVid.ended) {
+            ycVid.pause(); if (ycBgm.src) ycBgm.pause(); if (ycVoice.src) ycVoice.pause();
+            rec.stop(); return;
+          }
+          drawYcFrame();
+          pctEl.textContent = Math.min(99, Math.round(((ycVid.currentTime - ycTrimS) / total) * 100)) + "%";
+          requestAnimationFrame(loop);
+        };
+        loop();
+      } catch (err) { ov.classList.add("hidden"); showYcToast("⚠️ Export failed: " + err.message); }
+    }
+
+    function rotateYcVideo() { ycRotDeg = (ycRotDeg + 90) % 360; drawYcFrame(); }
+    function flipYcVideo(axis) { if (axis === "h") ycFlipH *= -1; else ycFlipV *= -1; drawYcFrame(); }
+    function updateYcZoom() { ycZoomPct = Number(document.getElementById("ycCropZoom")?.value || 100); document.getElementById("ycZoomLbl").textContent = ycZoomPct + "%"; drawYcFrame(); }
+    function toggleYcEnhance() { ycEnhanceOn = !ycEnhanceOn; showYcToast(ycEnhanceOn ? "✨ HD Enhance ON" : "HD Enhance OFF"); drawYcFrame(); }
+    function clearYcCaptions() { if (document.getElementById("ycCaptionsInput")) document.getElementById("ycCaptionsInput").value = ""; drawYcFrame(); }
+  </script>
+</body>
+</html>
