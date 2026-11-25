@@ -1,8 +1,12 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "in.fixrservice.yugacut.twa",
-        "sha256_cert_fingerprints": ["7D:DD:32:5B:FA:1A:C4:20:E2:A0:61:2B:65:90:83:4B:93:3E:D3:3F:35:57:A6:CE:3E:3C:A7:8C:D4:A1:EF:5D"]
-      }
-    }]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.fixrservice.yugacut.twa",
+      "sha256_cert_fingerprints": [
+        "7D:DD:32:5B:FA:1A:C4:20:E2:A0:61:2B:65:90:83:4B:93:3E:D3:3F:35:57:A6:CE:3E:3C:A7:8C:D4:A1:EF:5D"
+      ]
+    }
+  }
+]
