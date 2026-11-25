@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>YugaCut AI — Simple Video Editor</title>
+  <meta name="theme-color" content="#ffffff" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    html, body {
+      background: #ffffff;
+      color: #1f2937;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .yc-scroll::-webkit-scrollbar { display: none; }
+    .yc-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    .yc-tool-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 54px;
+      padding: 6px 4px;
+      gap: 3px;
+      color: #374151;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+    .yc-tool-btn i { font-size: 16px; }
+    .yc-tool-btn span { font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+    .yc-tool-btn.active { color: #ff5722; }
+    .yc-range {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      outline: none;
+    }
+    .yc-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ff5722;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-white text-gray-800 select-none">
+
+  <!-- Hidden File Inputs -->
+  <input id="ycMediaInput" type="file" accept="video/*,image/*" multiple class="hidden" onchange="handleMediaFiles(this.files)" />
+  <input id="ycAudioInput" type="file" accept="audio/*" class="hidden" onchange="handleAudioUpload(this.files)" />
+  <input id="ycExtractVideoInput" type="file" accept="video/*" class="hidden" onchange="handleExtractAudioFromVideo(this.files)" />
+
+  <!-- ==================== 1. HOME / LAUNCHER SCREEN (YouCut Start) ==================== -->
+  <div id="ycHomeScreen" class="fixed inset-0 z-30 flex flex-col justify-between bg-[#dce4e8] text-gray-800">
+    <div class="flex items-center justify-between px-4 pt-4">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl font-black tracking-tight text-white drop-shadow-sm">YugaCut</span>
+        <span class="bg-white text-[#ff5722] text-[11px] font-extrabold px-2 py-0.5 rounded-full shadow-sm">Free</span>
+      </div>
+      <button type="button" onclick="openEditorDirectly()" class="w-9 h-9 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 shadow-sm" title="Open Editor">
+        <i class="fa-solid fa-sliders text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Center Illustration / Project Actions -->
+    <div class="flex-1 flex flex-col items-center justify-center px-6 text-center">
+      <div class="w-24 h-24 rounded-3xl bg-white/90 shadow-md flex items-center justify-center mb-5">
+        <i class="fa-solid fa-clapperboard text-4xl text-[#ff5722]"></i>
+      </div>
+      <h1 class="text-lg font-bold text-gray-800 mb-1">Simple &amp; Clean Video Editor</h1>
+      <p class="text-xs text-gray-600 mb-6">Trim, Split, Music Waveform, Text, Filters — No Watermark</p>
+
+      <div class="w-full max-w-xs space-y-2.5">
+        <button type="button" onclick="triggerNewProject()" class="w-full py-3 rounded-xl bg-[#ff5722] hover:bg-[#f4511e] text-white font-bold text-sm tracking-wide shadow-md flex items-center justify-center gap-2">
+          <i class="fa-solid fa-plus"></i> NEW PROJECT
+        </button>
+        <button type="button" onclick="openEditorDirectly()" class="w-full py-2.5 rounded-xl bg-white hover:bg-gray-50 text-gray-700 font-semibold text-xs shadow-sm flex items-center justify-center gap-2">
+          <i class="fa-solid fa-folder-open text-[#ff5722]"></i> OPEN WORKSPACE
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Quick Icons -->
+    <div class="pb-7 flex items-center justify-center gap-8">
+      <button type="button" onclick="openEditorWithTool('captions')" class="w-12 h-12 rounded-full bg-white shadow flex items-center justify-center text-gray-700 text-xs font-extrabold" title="Auto Captions">
+        Ai
+      </button>
+      <button type="button" onclick="triggerNewProject()" class="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center text-[#ff5722] text-xl" title="New Project">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+      <button type="button" onclick="openEditorWithTool('music')" class="w-12 h-12 rounded-full bg-white shadow flex items-center justify-center text-gray-700 text-base" title="Music">
+        <i class="fa-solid fa-music"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 2. MAIN EDITOR SCREEN (Clean Light YouCut Layout) ==================== -->
+  <div id="ycEditorScreen" class="min-h-screen flex flex-col justify-between bg-white">
+
+    <!-- TOP BAR -->
+    <header class="px-3 py-2 flex items-center justify-between border-b border-gray-100 bg-white">
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="goHome()" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600" title="Back">
+          <i class="fa-solid fa-arrow-left text-sm"></i>
+        </button>
+        <span class="text-sm font-extrabold text-gray-800">YugaCut</span>
+        <select id="ycRatioSelect" onchange="setAspectRatio(this.value)" class="ml-1 rounded-md bg-gray-100 border border-gray-200 px-2 py-1 text-[11px] font-semibold text-gray-700">
+          <option value="9:16">9:16</option>
+          <option value="16:9">16:9</option>
+          <option value="1:1">1:1</option>
+          <option value="4:5">4:5</option>
+        </select>
+      </div>
+      <button type="button" onclick="openExportModal()" class="bg-[#ff5722] hover:bg-[#f4511e] text-white font-bold px-4 py-1.5 rounded-md text-xs tracking-wide shadow-sm">
+        SAVE
+      </button>
+    </header>
+
+    <!-- PREVIEW STAGE -->
+    <main class="flex-1 flex flex-col items-center justify-center bg-[#f4f5f7] px-3 py-2 relative overflow-hidden">
+      <div id="ycStageWrap" class="relative bg-black rounded-md overflow-hidden shadow-md flex items-center justify-center" style="width: 210px; height: 340px;">
+        <canvas id="ycPreviewCanvas" width="540" height="960" class="w-full h-full object-contain touch-none cursor-move"></canvas>
+
+        <!-- Empty State Tap Prompt -->
+        <button id="ycEmptyTap" type="button" onclick="document.getElementById('ycMediaInput').click()" class="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white gap-2 hover:bg-black/40 transition">
+          <span class="w-11 h-11 rounded-full bg-[#ff5722] flex items-center justify-center text-lg shadow">
+            <i class="fa-solid fa-plus"></i>
+          </span>
+          <span class="text-xs font-semibold">Tap to add Video or Photo</span>
+        </button>
+      </div>
+    </main>
+
+    <!-- TRANSPORT BAR -->
+    <div class="bg-white border-t border-gray-100 px-3 py-1.5 flex items-center justify-between">
+      <div class="flex items-center gap-3 text-gray-500">
+        <button type="button" onclick="undoAction()" class="p-1.5 hover:text-gray-800" title="Undo"><i class="fa-solid fa-rotate-left text-sm"></i></button>
+        <button type="button" onclick="redoAction()" class="p-1.5 hover:text-gray-800" title="Redo"><i class="fa-solid fa-rotate-right text-sm"></i></button>
+      </div>
+      <div class="flex items-center gap-4 text-gray-800">
+        <button type="button" onclick="seekTo(0)" class="p-1.5 hover:text-[#ff5722]" title="Start"><i class="fa-solid fa-backward-step text-sm"></i></button>
+        <button type="button" id="ycPlayBtn" onclick="togglePlay()" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-900 hover:bg-gray-100" title="Play / Pause">
+          <i class="fa-solid fa-play text-base"></i>
+        </button>
+      </div>
+      <div class="flex items-center gap-2 text-gray-500">
+        <button type="button" onclick="toggleFullscreenPreview()" class="p-1.5 hover:text-gray-800" title="Fullscreen"><i class="fa-solid fa-expand text-sm"></i></button>
+      </div>
+    </div>
+
+    <!-- COLLAPSIBLE TOOL DRAWER (Opens ONLY when a tool is tapped) -->
+    <div id="ycToolDrawer" class="hidden bg-[#fafafa] border-t border-gray-200 px-3 py-2.5">
+      <div class="flex items-center justify-between mb-2">
+        <span id="ycDrawerTitle" class="text-[11px] font-bold uppercase tracking-wider text-gray-700">Tool</span>
+        <button type="button" onclick="closeToolDrawer()" class="text-[11px] font-bold text-[#ff5722] px-2 py-0.5 rounded hover:bg-orange-50">Done</button>
+      </div>
+      <div id="ycDrawerBody" class="space-y-2 text-xs"></div>
+    </div>
+
+    <!-- HORIZONTAL COMPACT ICON TOOLBAR -->
+    <div class="bg-white border-t border-gray-100 flex items-center">
+      <button id="ycCollapseBtn" type="button" onclick="deselectClip()" class="hidden px-2.5 py-2 border-r border-gray-100 text-gray-500 hover:text-gray-800" title="Back to main tools">
+        <i class="fa-solid fa-chevron-down text-xs"></i>
+      </button>
+      <div id="ycToolbarRow" class="flex-1 flex items-center overflow-x-auto yc-scroll px-1">
+        <!-- Populated dynamically for Normal Mode vs Clip-Selected Mode -->
+      </div>
+    </div>
+
+    <!-- BOTTOM TIMELINE (Clean White, Real Filmstrip Thumbnails + Audio Track + Red Playhead) -->
+    <div class="bg-white border-t border-gray-100 pt-2 pb-2 px-2">
+      <div class="flex items-stretch gap-2">
+        <!-- Left Fixed Controls -->
+        <div class="w-24 flex-shrink-0 flex items-center justify-around">
+          <button type="button" onclick="document.getElementById('ycMediaInput').click()" class="w-10 h-10 rounded-full bg-[#ff5722] hover:bg-[#f4511e] text-white shadow-md flex items-center justify-center text-lg" title="Add Video or Photo">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+          <button type="button" id="ycMuteBtn" onclick="toggleGlobalMute()" class="flex flex-col items-center text-[9px] font-semibold text-gray-600 leading-tight">
+            <i class="fa-solid fa-volume-high text-sm mb-0.5 text-[#ff5722]"></i>
+            <span>Mute<br/>clip</span>
+          </button>
+        </div>
+
+        <!-- Right Scrollable Multi-Track Timeline -->
+        <div id="ycTimelineViewport" class="flex-1 relative overflow-x-auto yc-scroll bg-[#f8f9fa] rounded-lg border border-gray-200 min-h-[104px] py-1.5 px-2 cursor-pointer" onclick="handleTimelineTap(event)">
+          <div id="ycTracksWrap" class="relative min-w-full space-y-1.5">
+            <!-- Text / Sticker Track -->
+            <div id="ycOverlayTrack" class="h-5 flex items-center gap-1"></div>
+            <!-- Audio / Music Track -->
+            <div id="ycAudioTrack" class="h-6 flex items-center gap-1"></div>
+            <!-- Main Video / Photo Filmstrip Track -->
+            <div id="ycVideoTrack" class="h-12 flex items-center gap-1"></div>
+          </div>
+          <!-- Red Playhead -->
+          <div id="ycPlayhead" class="pointer-events-none absolute top-0 bottom-0 w-[2px] bg-[#ff5722] z-10" style="left: 8px;"></div>
+        </div>
+      </div>
+
+      <!-- Time Counter Row -->
+      <div class="mt-1.5 px-2 flex items-center justify-between text-[11px] font-semibold text-gray-500">
+        <span id="ycCurrentTime">0:00.0</span>
+        <span id="ycTotalTime">Total 0:00.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 3. MUSIC / AUDIO PICKER & WAVEFORM TRIMMER MODAL ==================== -->
+  <div id="ycMusicModal" class="hidden fixed inset-0 z-40 bg-white flex flex-col">
+    <!-- Top Header -->
+    <div class="px-3 py-3 border-b border-gray-100 flex items-center gap-3">
+      <button type="button" onclick="closeMusicModal()" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-700">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <span class="text-base font-bold text-gray-800">Music</span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="grid grid-cols-3 border-b border-gray-100 text-xs font-bold text-center">
+      <button type="button" id="ycTabMyMusic" onclick="switchMusicTab('mymusic')" class="py-2.5 text-[#ff5722] border-b-2 border-[#ff5722]">MY MUSIC</button>
+      <button type="button" id="ycTabEffects" onclick="switchMusicTab('effects')" class="py-2.5 text-gray-500">EFFECTS</button>
+      <button type="button" id="ycTabVoice" onclick="switchMusicTab('voice')" class="py-2.5 text-gray-500">VOICEOVER</button>
+    </div>
+
+    <!-- Tab Body -->
+    <div id="ycMusicBody" class="flex-1 overflow-y-auto p-4 space-y-4 pb-40">
+      <!-- Populated dynamically -->
+    </div>
+
+    <!-- BOTTOM WAVEFORM TRIMMER BAR (Matches Screenshot 10: Listen + Trim + USE!) -->
+    <div id="ycAudioTrimmerBar" class="hidden fixed bottom-0 left-0 right-0 bg-[#2b2b2b] text-white p-3 shadow-2xl border-t border-gray-700 z-50">
+      <div class="flex items-center justify-between text-[11px] font-semibold text-gray-300 mb-1.5">
+        <span id="ycTrimAudioStart">0:00.0</span>
+        <span id="ycTrimAudioMid" class="text-white">0:00.0 / 0:00.0</span>
+        <span id="ycTrimAudioEnd">0:00.0</span>
+      </div>
+
+      <!-- Waveform Canvas + Range Sliders -->
+      <div class="relative h-12 bg-[#1f1f1f] rounded-md overflow-hidden mb-2.5 flex items-center px-1">
+        <canvas id="ycWaveformCanvas" width="400" height="44" class="w-full h-full"></canvas>
+      </div>
+
+      <!-- Start / End Trim Sliders -->
+      <div class="grid grid-cols-2 gap-3 mb-3 text-[10px] text-gray-300">
+        <div>
+          <div class="flex justify-between mb-0.5"><span>Start Cut</span><span id="ycTrimStartVal">0.0s</span></div>
+          <input id="ycAudioTrimStartSlider" type="range" min="0" max="100" step="0.1" value="0" oninput="updateAudioTrimPreview()" class="w-full yc-range" />
+        </div>
+        <div>
+          <div class="flex justify-between mb-0.5"><span>End Cut</span><span id="ycTrimEndVal">0.0s</span></div>
+          <input id="ycAudioTrimEndSlider" type="range" min="0" max="100" step="0.1" value="100" oninput="updateAudioTrimPreview()" class="w-full yc-range" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-3">
+        <button type="button" id="ycAudioPreviewPlayBtn" onclick="toggleAudioPreviewPlay()" class="w-9 h-9 rounded-full bg-white text-gray-900 flex items-center justify-center flex-shrink-0 shadow">
+          <i class="fa-solid fa-play text-xs"></i>
+        </button>
+        <div class="flex-1 min-w-0">
+          <div id="ycTrimAudioName" class="text-xs font-semibold truncate">Selected Audio</div>
+          <div id="ycTrimAudioDur" class="text-[10px] text-gray-400">0:00.0</div>
+        </div>
+        <button type="button" onclick="confirmUseTrimmedAudio()" class="bg-[#ff5722] hover:bg-[#f4511e] text-white font-bold text-xs px-5 py-2 rounded-md shadow">
+          USE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 4. EXPORT / SAVE MODAL ==================== -->
+  <div id="ycExportModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-3">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-4 space-y-3 shadow-xl">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-gray-800">Save Video</h2>
+        <button type="button" onclick="closeExportModal()" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="block text-gray-500 font-semibold mb-1">Resolution</label>
+          <select id="ycExportRes" class="w-full border border-gray-200 rounded-lg px-2.5 py-2 bg-gray-50 font-semibold">
+            <option value="720">720p HD (Fast)</option>
+            <option value="1080">1080p Full HD</option>
+            <option value="480">480p (Small Size)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-gray-500 font-semibold mb-1">Frame Rate</label>
+          <select id="ycExportFps" class="w-full border border-gray-200 rounded-lg px-2.5 py-2 bg-gray-50 font-semibold">
+            <option value="30">30 FPS</option>
+            <option value="24">24 FPS</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="ycExportProgressWrap" class="hidden space-y-1.5">
+        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+          <div id="ycExportBar" class="bg-[#ff5722] h-2 transition-all" style="width: 0%;"></div>
+        </div>
+        <div id="ycExportStatus" class="text-[11px] text-center text-gray-600 font-semibold">Preparing...</div>
+      </div>
+
+      <button type="button" id="ycStartExportBtn" onclick="startVideoExport()" class="w-full py-2.5 rounded-xl bg-[#ff5722] hover:bg-[#f4511e] text-white font-bold text-xs shadow">
+        SAVE VIDEO
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ==================== STATE ====================
+    const state = {
+      clips: [], // { id, type: 'video'|'image', name, url, mediaEl, duration, trimStart, trimEnd, speed, volume, rotate, filter, thumbs: [] }
+      audioClips: [], // { id, name, url, audioEl, startAt, trimStart, trimEnd, volume, waveform: [] }
+      overlays: [], // { id, kind: 'text'|'sticker', text, x, y, size, color, startAt, duration }
+      selectedClipId: null,
+      selectedAudioId: null,
+      selectedOverlayId: null,
+      activeTool: null,
+      ratio: '9:16',
+      mutedGlobal: false,
+      isPlaying: false,
+      playhead: 0,
+      totalDuration: 0,
+      pxPerSec: 36,
+      history: [],
+      redoStack: [],
+      // Music modal state
+      musicLibrary: [], // { id, name, url, duration, waveform, buffer }
+      currentMusicTab: 'mymusic',
+      pendingAudio: null, // { id, name, url, duration, trimStart, trimEnd, waveform, previewEl, playing }
+      mediaRecorder: null,
+      voiceChunks: [],
+      isRecordingVoice: false
+    };
+
+    const FILTER_PRESETS = [
+      { id: 'none', name: 'Normal', css: 'none' },
+      { id: 'vivid', name: 'Vivid', css: 'saturate(1.35) contrast(1.08)' },
+      { id: 'warm', name: 'Warm', css: 'sepia(0.25) saturate(1.2) brightness(1.03)' },
+      { id: 'cool', name: 'Cool', css: 'hue-rotate(185deg) saturate(0.95) brightness(1.02)' },
+      { id: 'bw', name: 'B&W', css: 'grayscale(1) contrast(1.1)' },
+      { id: 'vintage', name: 'Vintage', css: 'sepia(0.45) contrast(0.95) brightness(0.95)' }
+    ];
+
+    const STICKERS = ['❤️', '🔥', '😂', '✨', '👍', '🎉', '🎶', '⭐', '🙏', '💯'];
+
+    const SFX_PRESETS = [
+      { id: 'sfx_pop', name: 'Pop Bubble', dur: 0.4, freq: 520, type: 'sine' },
+      { id: 'sfx_ding', name: 'Bell Ding', dur: 0.9, freq: 880, type: 'triangle' },
+      { id: 'sfx_whoosh', name: 'Whoosh', dur: 0.7, freq: 240, type: 'sawtooth' },
+      { id: 'sfx_click', name: 'Snap Click', dur: 0.25, freq: 1100, type: 'square' }
+    ];
+
+    const canvas = document.getElementById('ycPreviewCanvas');
+    const ctx = canvas.getContext('2d');
+    let rafId = null;
+    let lastTick = 0;
+
+    // ==================== NAVIGATION ====================
+    function triggerNewProject() {
+      document.getElementById('ycHomeScreen').classList.add('hidden');
+      document.getElementById('ycMediaInput').click();
+    }
+
+    function openEditorDirectly() {
+      document.getElementById('ycHomeScreen').classList.add('hidden');
+      renderToolbar();
+      renderTimeline();
+      drawFrame();
+    }
+
+    function openEditorWithTool(tool) {
+      openEditorDirectly();
+      if (tool === 'music') openMusicModal();
+      else openTool(tool);
+    }
+
+    function goHome() {
+      pausePlayback();
+      document.getElementById('ycHomeScreen').classList.remove('hidden');
+    }
+
+    function setAspectRatio(ratio) {
+      state.ratio = ratio;
+      const wrap = document.getElementById('ycStageWrap');
+      if (ratio === '9:16') { canvas.width = 540; canvas.height = 960; wrap.style.width = '195px'; wrap.style.height = '346px'; }
+      else if (ratio === '16:9') { canvas.width = 960; canvas.height = 540; wrap.style.width = '320px'; wrap.style.height = '180px'; }
+      else if (ratio === '1:1') { canvas.width = 720; canvas.height = 720; wrap.style.width = '250px'; wrap.style.height = '250px'; }
+      else if (ratio === '4:5') { canvas.width = 720; canvas.height = 900; wrap.style.width = '220px'; wrap.style.height = '275px'; }
+      drawFrame();
+    }
+
+    // ==================== UNDO / REDO ====================
+    function saveSnapshot() {
+      const snap = JSON.stringify({
+        clips: state.clips.map(c => ({ ...c, mediaEl: null })),
+        audioClips: state.audioClips.map(a => ({ ...a, audioEl: null })),
+        overlays: state.overlays
+      });
+      state.history.push(snap);
+      if (state.history.length > 20) state.history.shift();
+      state.redoStack = [];
+    }
+
+    function restoreSnapshot(snapStr) {
+      const data = JSON.parse(snapStr);
+      const mediaById = Object.fromEntries(state.clips.map(c => [c.id, c.mediaEl]));
+      const audioById = Object.fromEntries(state.audioClips.map(a => [a.id, a.audioEl]));
+      state.clips = data.clips.map(c => ({ ...c, mediaEl: mediaById[c.id] }));
+      state.audioClips = data.audioClips.map(a => ({ ...a, audioEl: audioById[a.id] }));
+      state.overlays = data.overlays;
+      recomputeDuration();
+      renderTimeline();
+      drawFrame();
+    }
+
+    function undoAction() {
+      if (!state.history.length) return;
+      const cur = JSON.stringify({
+        clips: state.clips.map(c => ({ ...c, mediaEl: null })),
+        audioClips: state.audioClips.map(a => ({ ...a, audioEl: null })),
+        overlays: state.overlays
+      });
+      state.redoStack.push(cur);
+      restoreSnapshot(state.history.pop());
+    }
+
+    function redoAction() {
+      if (!state.redoStack.length) return;
+      const cur = JSON.stringify({
+        clips: state.clips.map(c => ({ ...c, mediaEl: null })),
+        audioClips: state.audioClips.map(a => ({ ...a, audioEl: null })),
+        overlays: state.overlays
+      });
+      state.history.push(cur);
+      restoreSnapshot(state.redoStack.pop());
+    }
+
+    // ==================== MEDIA IMPORT + REAL FILMSTRIP THUMBNAILS ====================
+    async function handleMediaFiles(fileList) {
+      if (!fileList || !fileList.length) return;
+      document.getElementById('ycHomeScreen').classList.add('hidden');
+      document.getElementById('ycEmptyTap').classList.add('hidden');
+      saveSnapshot();
+
+      for (const file of Array.from(fileList)) {
+        const url = URL.createObjectURL(file);
+        const isVideo = file.type.startsWith('video/');
+        const id = 'clip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+
+        if (isVideo) {
+          const video = document.createElement('video');
+          video.src = url;
+          video.playsInline = true;
+          video.muted = true;
+          video.preload = 'auto';
+          await new Promise(res => {
+            video.onloadedmetadata = () => res();
+            video.onerror = () => res();
+          });
+          const dur = isFinite(video.duration) && video.duration > 0 ? video.duration : 5;
+          const clip = {
+            id, type: 'video', name: file.name, url, mediaEl: video,
+            duration: dur, trimStart: 0, trimEnd: dur,
+            speed: 1, volume: 1, rotate: 0, filter: 'none', thumbs: []
+          };
+          state.clips.push(clip);
+          recomputeDuration();
+          renderTimeline();
+          drawFrame();
+          // Extract real filmstrip frames in background so user sees exact video frames!
+          extractVideoFilmstrip(clip, url);
+        } else {
+          const img = new Image();
+          img.src = url;
+          await new Promise(res => { img.onload = res; img.onerror = res; });
+          const clip = {
+            id, type: 'image', name: file.name, url, mediaEl: img,
+            duration: 4, trimStart: 0, trimEnd: 4,
+            speed: 1, volume: 1, rotate: 0, filter: 'none', thumbs: [url]
+          };
+          state.clips.push(clip);
+          recomputeDuration();
+          renderTimeline();
+          drawFrame();
+        }
+      }
+      document.getElementById('ycMediaInput').value = '';
+    }
+
+    async function extractVideoFilmstrip(clip, url) {
+      try {
+        const probe = document.createElement('video');
+        probe.src = url;
+        probe.muted = true;
+        probe.playsInline = true;
+        await new Promise(r => { probe.onloadeddata = r; probe.onerror = r; });
+
+        const c = document.createElement('canvas');
+        c.width = 72;
+        c.height = 72;
+        const cctx = c.getContext('2d');
+        const count = Math.min(10, Math.max(4, Math.ceil(clip.duration / 3)));
+        const thumbs = [];
+
+        for (let i = 0; i < count; i++) {
+          const t = Math.min(clip.duration - 0.05, (i / count) * clip.duration + 0.05);
+          probe.currentTime = t;
+          await new Promise(r => {
+            const onSeek = () => { probe.removeEventListener('seeked', onSeek); r(); };
+            probe.addEventListener('seeked', onSeek);
+            setTimeout(r, 350);
+          });
+          cctx.drawImage(probe, 0, 0, c.width, c.height);
+          thumbs.push(c.toDataURL('image/jpeg', 0.6));
+        }
+        clip.thumbs = thumbs;
+        renderTimeline();
+      } catch (e) {
+        console.warn('Thumb extract fallback', e);
+      }
+    }
+
+    // ==================== TIMELINE MATH & RENDERING ====================
+    function getClipEffectiveDur(c) {
+      return Math.max(0.2, (c.trimEnd - c.trimStart) / (c.speed || 1));
+    }
+
+    function recomputeDuration() {
+      let total = 0;
+      for (const c of state.clips) total += getClipEffectiveDur(c);
+      for (const a of state.audioClips) {
+        const aEnd = a.startAt + Math.max(0.2, a.trimEnd - a.trimStart);
+        if (aEnd > total) total = aEnd;
+      }
+      state.totalDuration = total;
+      if (state.playhead > total) state.playhead = total;
+      document.getElementById('ycTotalTime').textContent = 'Total ' + fmtTime(total);
+      document.getElementById('ycCurrentTime').textContent = fmtTime(state.playhead);
+      updatePlayheadPosition();
+    }
+
+    function fmtTime(sec) {
+      const s = Math.max(0, sec || 0);
+      const m = Math.floor(s / 60);
+      const r = (s % 60).toFixed(1).padStart(4, '0');
+      return `${m}:${r}`;
+    }
+
+    function updatePlayheadPosition() {
+      const ph = document.getElementById('ycPlayhead');
+      ph.style.left = (8 + state.playhead * state.pxPerSec) + 'px';
+      document.getElementById('ycCurrentTime').textContent = fmtTime(state.playhead);
+    }
+
+    function renderTimeline() {
+      const videoTrack = document.getElementById('ycVideoTrack');
+      const audioTrack = document.getElementById('ycAudioTrack');
+      const overlayTrack = document.getElementById('ycOverlayTrack');
+
+      if (!state.clips.length) {
+        videoTrack.innerHTML = '<div class="text-[11px] text-gray-400 px-2">Tap + to add Video or Photo</div>';
+        document.getElementById('ycEmptyTap').classList.remove('hidden');
+      } else {
+        document.getElementById('ycEmptyTap').classList.add('hidden');
+        videoTrack.innerHTML = state.clips.map(c => {
+          const dur = getClipEffectiveDur(c);
+          const w = Math.max(56, Math.round(dur * state.pxPerSec));
+          const isSel = state.selectedClipId === c.id;
+          const thumbsHtml = (c.thumbs && c.thumbs.length)
+            ? c.thumbs.map(src => `<img src="${src}" class="h-full flex-1 object-cover min-w-[28px]" alt="" />`).join('')
+            : `<div class="w-full h-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">${c.name}</div>`;
+
+          return `
+            <div onclick="selectClip('${c.id}', event)" style="width:${w}px"
+              class="relative h-12 rounded-md overflow-hidden flex flex-shrink-0 cursor-pointer border-2 ${isSel ? 'border-[#ff5722] shadow-sm' : 'border-transparent'}">
+              ${thumbsHtml}
+              <span class="absolute bottom-0.5 right-1 bg-black/60 text-white text-[9px] font-semibold px-1 rounded">${fmtTime(dur)}</span>
+              ${c.type === 'video' ? `<span class="absolute bottom-0.5 left-1 bg-black/60 text-white text-[9px] px-1 rounded"><i class="fa-solid fa-volume-high text-[8px]"></i> ${Math.round((c.volume ?? 1)*100)}%</span>` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Audio Track
+      if (!state.audioClips.length) {
+        audioTrack.innerHTML = '';
+      } else {
+        audioTrack.innerHTML = state.audioClips.map(a => {
+          const dur = Math.max(0.2, a.trimEnd - a.trimStart);
+          const w = Math.max(50, Math.round(dur * state.pxPerSec));
+          const left = Math.round(a.startAt * state.pxPerSec);
+          const isSel = state.selectedAudioId === a.id;
+          return `
+            <div onclick="selectAudioClip('${a.id}', event)" style="width:${w}px; margin-left:${left}px"
+              class="h-6 rounded bg-emerald-50 border ${isSel ? 'border-[#ff5722]' : 'border-emerald-300'} px-1.5 flex items-center gap-1 flex-shrink-0 cursor-pointer">
+              <i class="fa-solid fa-music text-[9px] text-emerald-600"></i>
+              <span class="text-[10px] font-semibold text-emerald-800 truncate">${escapeHtml(a.name)}</span>
+              <span class="text-[9px] text-emerald-600 ml-auto">${fmtTime(dur)}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Overlay Track
+      if (!state.overlays.length) {
+        overlayTrack.innerHTML = '';
+      } else {
+        overlayTrack.innerHTML = state.overlays.map(o => {
+          const w = Math.max(48, Math.round(o.duration * state.pxPerSec));
+          const isSel = state.selectedOverlayId === o.id;
+          return `
+            <div onclick="selectOverlay('${o.id}', event)" style="width:${w}px"
+              class="h-5 rounded bg-sky-100 border ${isSel ? 'border-[#ff5722]' : 'border-sky-300'} px-1.5 flex items-center gap-1 flex-shrink-0 cursor-pointer">
+              <span class="text-[9px] font-bold text-sky-800">${o.kind === 'text' ? 'T' : '☺'}</span>
+              <span class="text-[9.5px] font-medium text-sky-900 truncate">${escapeHtml(o.text)}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      updatePlayheadPosition();
+      renderToolbar();
+    }
+
+    function handleTimelineTap(e) {
+      if (e.target.closest('[onclick*="select"]')) return;
+      const vp = document.getElementById('ycTimelineViewport');
+      const rect = vp.getBoundingClientRect();
+      const x = e.clientX - rect.left + vp.scrollLeft - 8;
+      const sec = Math.max(0, Math.min(state.totalDuration, x / state.pxPerSec));
+      seekTo(sec);
+    }
+
+    function selectClip(id, ev) {
+      if (ev) ev.stopPropagation();
+      state.selectedClipId = id;
+      state.selectedAudioId = null;
+      state.selectedOverlayId = null;
+      renderTimeline();
+    }
+
+    function selectAudioClip(id, ev) {
+      if (ev) ev.stopPropagation();
+      state.selectedAudioId = id;
+      state.selectedClipId = null;
+      state.selectedOverlayId = null;
+      renderTimeline();
+      openTool('audioEdit');
+    }
+
+    function selectOverlay(id, ev) {
+      if (ev) ev.stopPropagation();
+      state.selectedOverlayId = id;
+      state.selectedClipId = null;
+      state.selectedAudioId = null;
+      renderTimeline();
+      openTool('text');
+    }
+
+    function deselectClip() {
+      state.selectedClipId = null;
+      state.selectedAudioId = null;
+      state.selectedOverlayId = null;
+      closeToolDrawer();
+      renderTimeline();
+    }
+
+    // ==================== CONTEXTUAL TOOLBAR ====================
+    function renderToolbar() {
+      const row = document.getElementById('ycToolbarRow');
+      const collapseBtn = document.getElementById('ycCollapseBtn');
+
+      if (state.selectedClipId) {
+        collapseBtn.classList.remove('hidden');
+        const items = [
+          ['trim', 'fa-scissors', 'Trim'],
+          ['split', 'fa-grip-lines-vertical', 'Split'],
+          ['speed', 'fa-gauge-high', 'Speed'],
+          ['volume', 'fa-volume-high', 'Volume'],
+          ['filter', 'fa-wand-magic-sparkles', 'Filter'],
+          ['rotate', 'fa-rotate-right', 'Rotate'],
+          ['duplicate', 'fa-copy', 'Copy'],
+          ['deleteClip', 'fa-trash', 'Delete']
+        ];
+        row.innerHTML = items.map(([id, icon, label]) => `
+          <button type="button" onclick="handleToolClick('${id}')" class="yc-tool-btn ${state.activeTool === id ? 'active' : ''}">
+            <i class="fa-solid ${icon}"></i><span>${label}</span>
+          </button>
+        `).join('');
+      } else {
+        collapseBtn.classList.add('hidden');
+        const items = [
+          ['trim', 'fa-scissors', 'Trim'],
+          ['music', 'fa-music', 'Music'],
+          ['filter', 'fa-circle-half-stroke', 'Filter'],
+          ['text', 'fa-font', 'Text'],
+          ['sticker', 'fa-face-smile', 'Sticker'],
+          ['speed', 'fa-gauge-high', 'Speed'],
+          ['rotate', 'fa-rotate-right', 'Rotate'],
+          ['captions', 'fa-closed-captioning', 'Captions']
+        ];
+        row.innerHTML = items.map(([id, icon, label]) => `
+          <button type="button" onclick="handleToolClick('${id}')" class="yc-tool-btn ${state.activeTool === id ? 'active' : ''}">
+            <i class="fa-solid ${icon}"></i><span>${label}</span>
+          </button>
+        `).join('');
+      }
+    }
+
+    function handleToolClick(toolId) {
+      if (toolId === 'music') { openMusicModal(); return; }
+      if (toolId === 'split') { splitAtPlayhead(); return; }
+      if (toolId === 'duplicate') { duplicateSelectedClip(); return; }
+      if (toolId === 'deleteClip') { deleteSelectedClip(); return; }
+      if (toolId === 'rotate') { rotateSelectedClip(); return; }
+      openTool(toolId);
+    }
+
+    function openTool(toolId) {
+      state.activeTool = toolId;
+      renderToolbar();
+      const drawer = document.getElementById('ycToolDrawer');
+      const title = document.getElementById('ycDrawerTitle');
+      const body = document.getElementById('ycDrawerBody');
+      drawer.classList.remove('hidden');
+
+      const clip = getActiveClip();
+
+      if (toolId === 'trim') {
+        title.textContent = 'Trim Clip';
+        if (!clip) { body.innerHTML = '<p class="text-gray-500">Add a video or photo first.</p>'; return; }
+        body.innerHTML = `
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <div class="flex justify-between text-[11px] font-semibold"><span>Start</span><span id="ycTrimS">${clip.trimStart.toFixed(1)}s</span></div>
+              <input type="range" min="0" max="${Math.max(0.5, clip.duration - 0.2)}" step="0.1" value="${clip.trimStart}" oninput="updateClipTrim('start', this.value)" class="w-full yc-range" />
+            </div>
+            <div>
+              <div class="flex justify-between text-[11px] font-semibold"><span>End</span><span id="ycTrimE">${clip.trimEnd.toFixed(1)}s</span></div>
+              <input type="range" min="0.2" max="${clip.duration}" step="0.1" value="${clip.trimEnd}" oninput="updateClipTrim('end', this.value)" class="w-full yc-range" />
+            </div>
+          </div>`;
+      } else if (toolId === 'filter') {
+        title.textContent = 'Filter';
+        if (!clip) { body.innerHTML = '<p class="text-gray-500">Add a video or photo first.</p>'; return; }
+        body.innerHTML = `<div class="flex gap-2 overflow-x-auto yc-scroll py-1">` + FILTER_PRESETS.map(f => `
+          <button type="button" onclick="applyClipFilter('${f.id}')" class="px-3 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0 ${clip.filter === f.id ? 'border-[#ff5722] bg-orange-50 text-[#ff5722]' : 'border-gray-200 bg-white text-gray-700'}">${f.name}</button>
+        `).join('') + `</div>`;
+      } else if (toolId === 'speed') {
+        title.textContent = 'Speed';
+        if (!clip) { body.innerHTML = '<p class="text-gray-500">Add a video or photo first.</p>'; return; }
+        body.innerHTML = `
+          <div class="flex items-center gap-3">
+            <input type="range" min="0.5" max="3" step="0.25" value="${clip.speed}" oninput="updateClipSpeed(this.value)" class="flex-1 yc-range" />
+            <span id="ycSpeedVal" class="font-bold text-[#ff5722] w-10 text-right">${clip.speed}x</span>
+          </div>`;
+      } else if (toolId === 'volume') {
+        title.textContent = 'Clip Volume';
+        if (!clip) { body.innerHTML = '<p class="text-gray-500">Add a video first.</p>'; return; }
+        body.innerHTML = `
+          <div class="flex items-center gap-3">
+            <input type="range" min="0" max="2" step="0.1" value="${clip.volume}" oninput="updateClipVolume(this.value)" class="flex-1 yc-range" />
+            <span id="ycVolVal" class="font-bold text-[#ff5722] w-10 text-right">${Math.round(clip.volume * 100)}%</span>
+          </div>`;
+      } else if (toolId === 'text' || toolId === 'captions') {
+        title.textContent = toolId === 'captions' ? 'Captions / Subtitle' : 'Text Overlay';
+        const ov = state.overlays.find(o => o.id === state.selectedOverlayId) || null;
+        body.innerHTML = `
+          <div class="flex gap-2">
+            <input id="ycTextInput" type="text" placeholder="Type text here..." value="${ov ? escapeHtml(ov.text) : ''}" class="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-xs" />
+            <input id="ycTextColor" type="color" value="${ov ? ov.color : '#ffffff'}" class="w-9 h-8 rounded border border-gray-200 bg-white p-0.5" />
+            <button type="button" onclick="addOrUpdateText()" class="bg-[#ff5722] text-white font-bold px-3 rounded-lg text-xs">${ov ? 'Update' : 'Add'}</button>
+          </div>
+          ${ov ? `<div class="flex items-center justify-between pt-1">
+            <span class="text-[11px] text-gray-500">Drag text directly on preview</span>
+            <button type="button" onclick="deleteSelectedOverlay()" class="text-red-500 font-semibold text-[11px]">Delete Text</button>
+          </div>` : ''}`;
+      } else if (toolId === 'sticker') {
+        title.textContent = 'Stickers';
+        body.innerHTML = `<div class="flex gap-2 overflow-x-auto yc-scroll py-1">` + STICKERS.map(s => `
+          <button type="button" onclick="addSticker('${s}')" class="w-9 h-9 rounded-lg bg-white border border-gray-200 text-lg flex items-center justify-center flex-shrink-0 hover:border-[#ff5722]">${s}</button>
+        `).join('') + `</div>`;
+      } else if (toolId === 'audioEdit') {
+        title.textContent = 'Edit Music Track';
+        const ac = state.audioClips.find(a => a.id === state.selectedAudioId);
+        if (!ac) { closeToolDrawer(); return; }
+        body.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-xs font-semibold truncate flex-1">${escapeHtml(ac.name)}</span>
+            <input type="range" min="0" max="1.5" step="0.1" value="${ac.volume}" oninput="updateSelectedAudioVol(this.value)" class="w-28 yc-range" />
+            <button type="button" onclick="deleteSelectedAudio()" class="text-red-500 font-bold text-xs px-2 py-1 rounded bg-red-50">Delete</button>
+          </div>`;
+      }
+    }
+
+    function closeToolDrawer() {
+      state.activeTool = null;
+      document.getElementById('ycToolDrawer').classList.add('hidden');
+      renderToolbar();
+    }
+
+    function getActiveClip() {
+      if (state.selectedClipId) return state.clips.find(c => c.id === state.selectedClipId) || null;
+      const info = getClipAtTime(state.playhead);
+      return info ? info.clip : (state.clips[0] || null);
+    }
+
+    // ==================== CLIP ACTIONS ====================
+    function updateClipTrim(which, val) {
+      const clip = getActiveClip();
+      if (!clip) return;
+      const v = parseFloat(val);
+      if (which === 'start') {
+        clip.trimStart = Math.min(v, clip.trimEnd - 0.2);
+        document.getElementById('ycTrimS').textContent = clip.trimStart.toFixed(1) + 's';
+      } else {
+        clip.trimEnd = Math.max(v, clip.trimStart + 0.2);
+        document.getElementById('ycTrimE').textContent = clip.trimEnd.toFixed(1) + 's';
+      }
+      recomputeDuration();
+      renderTimeline();
+      drawFrame();
+    }
+
+    function splitAtPlayhead() {
+      const info = getClipAtTime(state.playhead);
+      if (!info) return;
+      const { clip, localOffset, idx } = info;
+      const effDur = getClipEffectiveDur(clip);
+      if (localOffset <= 0.15 || localOffset >= effDur - 0.15) return;
+
+      saveSnapshot();
+      const splitPoint = clip.trimStart + localOffset * clip.speed;
+      const second = {
+        ...clip,
+        id: 'clip_' + Date.now() + '_sp',
+        trimStart: splitPoint,
+        thumbs: [...clip.thumbs]
+      };
+      clip.trimEnd = splitPoint;
+      state.clips.splice(idx + 1, 0, second);
+      recomputeDuration();
+      renderTimeline();
+      drawFrame();
+    }
+
+    function applyClipFilter(filterId) {
+      const clip = getActiveClip();
+      if (!clip) return;
+      saveSnapshot();
+      clip.filter = filterId;
+      openTool('filter');
+      drawFrame();
+    }
+
+    function updateClipSpeed(val) {
+      const clip = getActiveClip();
+      if (!clip) return;
+      clip.speed = parseFloat(val);
+      document.getElementById('ycSpeedVal').textContent = clip.speed + 'x';
+      recomputeDuration();
+      renderTimeline();
+    }
+
+    function updateClipVolume(val) {
+      const clip = getActiveClip();
+      if (!clip) return;
+      clip.volume = parseFloat(val);
+      document.getElementById('ycVolVal').textContent = Math.round(clip.volume * 100) + '%';
+      renderTimeline();
+    }
+
+    function rotateSelectedClip() {
+      const clip = getActiveClip();
+      if (!clip) return;
+      saveSnapshot();
+      clip.rotate = ((clip.rotate || 0) + 90) % 360;
+      drawFrame();
+    }
+
+    function duplicateSelectedClip() {
+      const clip = getActiveClip();
+      if (!clip) return;
+      saveSnapshot();
+      const idx = state.clips.findIndex(c => c.id === clip.id);
+      const copy = { ...clip, id: 'clip_' + Date.now() + '_cp', thumbs: [...clip.thumbs] };
+      state.clips.splice(idx + 1, 0, copy);
+      recomputeDuration();
+      renderTimeline();
+    }
+
+    function deleteSelectedClip() {
+      const clip = getActiveClip();
+      if (!clip) return;
+      saveSnapshot();
+      state.clips = state.clips.filter(c => c.id !== clip.id);
+      state.selectedClipId = null;
+      closeToolDrawer();
+      recomputeDuration();
+      renderTimeline();
+      drawFrame();
+    }
+
+    function toggleGlobalMute() {
+      state.mutedGlobal = !state.mutedGlobal;
+      const btn = document.getElementById('ycMuteBtn');
+      btn.innerHTML = state.mutedGlobal
+        ? '<i class="fa-solid fa-volume-xmark text-sm mb-0.5 text-gray-400"></i><span>Unmute<br/>clip</span>'
+        : '<i class="fa-solid fa-volume-high text-sm mb-0.5 text-[#ff5722]"></i><span>Mute<br/>clip</span>';
+    }
+
+    // ==================== TEXT & STICKERS ====================
+    function addOrUpdateText() {
+      const txt = document.getElementById('ycTextInput').value.trim();
+      const color = document.getElementById('ycTextColor').value;
+      if (!txt) return;
+      saveSnapshot();
+      const existing = state.overlays.find(o => o.id === state.selectedOverlayId);
+      if (existing) {
+        existing.text = txt;
+        existing.color = color;
+      } else {
+        const ov = {
+          id: 'ov_' + Date.now(), kind: 'text', text: txt, color,
+          x: canvas.width / 2, y: canvas.height * 0.78, size: 42,
+          startAt: state.playhead, duration: Math.max(3, Math.min(5, (state.totalDuration || 4) - state.playhead))
+        };
+        state.overlays.push(ov);
+        state.selectedOverlayId = ov.id;
+      }
+      renderTimeline();
+      drawFrame();
+    }
+
+    function addSticker(emoji) {
+      saveSnapshot();
+      const ov = {
+        id: 'ov_' + Date.now(), kind: 'sticker', text: emoji, color: '#ffffff',
+        x: canvas.width / 2, y: canvas.height / 2, size: 84,
+        startAt: state.playhead, duration: 3
+      };
+      state.overlays.push(ov);
+      state.selectedOverlayId = ov.id;
+      renderTimeline();
+      drawFrame();
+    }
+
+    function deleteSelectedOverlay() {
+      saveSnapshot();
+      state.overlays = state.overlays.filter(o => o.id !== state.selectedOverlayId);
+      state.selectedOverlayId = null;
+      closeToolDrawer();
+      renderTimeline();
+      drawFrame();
+    }
+
+    // Drag overlays on preview canvas
+    let draggingOverlay = null;
+    canvas.addEventListener('pointerdown', e => {
+      if (!state.overlays.length) return;
+      const rect = canvas.getBoundingClientRect();
+      const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const hit = [...state.overlays].reverse().find(o => Math.abs(o.x - cx) < 120 && Math.abs(o.y - cy) < 60);
+      if (hit) { draggingOverlay = hit; state.selectedOverlayId = hit.id; }
+    });
+    canvas.addEventListener('pointermove', e => {
+      if (!draggingOverlay) return;
+      const rect = canvas.getBoundingClientRect();
+      draggingOverlay.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      draggingOverlay.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      drawFrame();
+    });
+    window.addEventListener('pointerup', () => { draggingOverlay = null; });
+
+    // ==================== PLAYBACK & PREVIEW RENDERER ====================
+    function getClipAtTime(t) {
+      let acc = 0;
+      for (let i = 0; i < state.clips.length; i++) {
+        const c = state.clips[i];
+        const d = getClipEffectiveDur(c);
+        if (t <= acc + d || i === state.clips.length - 1) {
+          return { clip: c, idx: i, localOffset: Math.max(0, Math.min(d, t - acc)) };
+        }
+        acc += d;
+      }
+      return null;
+    }
+
+    function seekTo(sec) {
+      state.playhead = Math.max(0, Math.min(state.totalDuration, sec));
+      updatePlayheadPosition();
+      const info = getClipAtTime(state.playhead);
+      if (info && info.clip.type === 'video') {
+        const v = info.clip.mediaEl;
+        const target = info.clip.trimStart + info.localOffset * info.clip.speed;
+        if (Math.abs(v.currentTime - target) > 0.06) {
+          v.currentTime = target;
+          v.onseeked = () => drawFrame();
+        }
+      }
+      drawFrame();
+    }
+
+    function togglePlay() {
+      if (state.totalDuration <= 0) return;
+      if (state.isPlaying) pausePlayback();
+      else startPlayback();
+    }
+
+    function startPlayback() {
+      if (state.playhead >= state.totalDuration) state.playhead = 0;
+      state.isPlaying = true;
+      document.getElementById('ycPlayBtn').innerHTML = '<i class="fa-solid fa-pause text-base"></i>';
+      lastTick = performance.now();
+      rafId = requestAnimationFrame(playbackLoop);
+    }
+
+    function pausePlayback() {
+      state.isPlaying = false;
+      document.getElementById('ycPlayBtn').innerHTML = '<i class="fa-solid fa-play text-base"></i>';
+      if (rafId) cancelAnimationFrame(rafId);
+      state.clips.forEach(c => { if (c.type === 'video' && c.mediaEl) c.mediaEl.pause(); });
+      state.audioClips.forEach(a => { if (a.audioEl) a.audioEl.pause(); });
+    }
+
+    function playbackLoop(now) {
+      if (!state.isPlaying) return;
+      const dt = (now - lastTick) / 1000;
+      lastTick = now;
+      state.playhead += dt;
+
+      if (state.playhead >= state.totalDuration) {
+        state.playhead = state.totalDuration;
+        updatePlayheadPosition();
+        drawFrame();
+        pausePlayback();
+        return;
+      }
+
+      // Sync active video element
+      const info = getClipAtTime(state.playhead);
+      state.clips.forEach(c => {
+        if (c.type !== 'video') return;
+        const v = c.mediaEl;
+        if (info && info.clip.id === c.id) {
+          v.muted = state.mutedGlobal;
+          v.volume = Math.min(1, c.volume ?? 1);
+          v.playbackRate = c.speed || 1;
+          const target = c.trimStart + info.localOffset * c.speed;
+          if (v.paused) v.play().catch(() => {});
+          if (Math.abs(v.currentTime - target) > 0.25) v.currentTime = target;
+        } else if (!v.paused) {
+          v.pause();
+        }
+      });
+
+      // Sync audio tracks
+      state.audioClips.forEach(a => {
+        const dur = a.trimEnd - a.trimStart;
+        const inRange = state.playhead >= a.startAt && state.playhead <= a.startAt + dur;
+        const el = a.audioEl;
+        if (!el) return;
+        if (inRange) {
+          el.volume = Math.min(1, a.volume ?? 1);
+          const target = a.trimStart + (state.playhead - a.startAt);
+          if (el.paused) { el.currentTime = target; el.play().catch(() => {}); }
+        } else if (!el.paused) {
+          el.pause();
+        }
+      });
+
+      updatePlayheadPosition();
+      drawFrame();
+      rafId = requestAnimationFrame(playbackLoop);
+    }
+
+    function drawFrame() {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const info = getClipAtTime(state.playhead);
+      if (info && info.clip.mediaEl) {
+        const c = info.clip;
+        const el = c.mediaEl;
+        const vw = el.videoWidth || el.naturalWidth || canvas.width;
+        const vh = el.videoHeight || el.naturalHeight || canvas.height;
+        if (vw > 0 && vh > 0) {
+          ctx.save();
+          const preset = FILTER_PRESETS.find(f => f.id === c.filter);
+          ctx.filter = preset ? preset.css : 'none';
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate(((c.rotate || 0) * Math.PI) / 180);
+          const scale = Math.min(canvas.width / vw, canvas.height / vh);
+          const dw = vw * scale;
+          const dh = vh * scale;
+          ctx.drawImage(el, -dw / 2, -dh / 2, dw, dh);
+          ctx.restore();
+        }
+      }
+
+      // Draw active overlays
+      for (const o of state.overlays) {
+        if (state.playhead >= o.startAt && state.playhead <= o.startAt + o.duration) {
+          ctx.save();
+          ctx.font = `bold ${o.size}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          if (o.kind === 'text') {
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+            ctx.strokeText(o.text, o.x, o.y);
+            ctx.fillStyle = o.color || '#ffffff';
+          }
+          ctx.fillText(o.text, o.x, o.y);
+          ctx.restore();
+        }
+      }
+    }
+
+    function toggleFullscreenPreview() {
+      const wrap = document.getElementById('ycStageWrap');
+      if (!document.fullscreenElement) wrap.requestFullscreen?.().catch(() => {});
+      else document.exitFullscreen?.();
+    }
+
+    // ==================== MUSIC MODAL & WAVEFORM TRIMMER ====================
+    function openMusicModal() {
+      pausePlayback();
+      document.getElementById('ycMusicModal').classList.remove('hidden');
+      renderMusicBody();
+    }
+
+    function closeMusicModal() {
+      stopPendingAudioPreview();
+      document.getElementById('ycMusicModal').classList.add('hidden');
+    }
+
+    function switchMusicTab(tab) {
+      state.currentMusicTab = tab;
+      ['mymusic', 'effects', 'voice'].forEach(t => {
+        const el = document.getElementById('ycTab' + (t === 'mymusic' ? 'MyMusic' : t === 'effects' ? 'Effects' : 'Voice'));
+        if (t === tab) {
+          el.classList.add('text-[#ff5722]', 'border-b-2', 'border-[#ff5722]');
+          el.classList.remove('text-gray-500');
+        } else {
+          el.classList.remove('text-[#ff5722]', 'border-b-2', 'border-[#ff5722]');
+          el.classList.add('text-gray-500');
+        }
+      });
+      renderMusicBody();
+    }
+
+    function renderMusicBody() {
+      const body = document.getElementById('ycMusicBody');
+      if (state.currentMusicTab === 'mymusic') {
+        body.innerHTML = `
+          <div class="grid grid-cols-2 gap-4 text-center py-2">
+            <button type="button" onclick="document.getElementById('ycAudioInput').click()" class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50">
+              <span class="w-12 h-12 rounded-full bg-[#ff5722] text-white flex items-center justify-center text-lg shadow-sm"><i class="fa-solid fa-folder-open"></i></span>
+              <span class="text-xs font-semibold text-gray-700">Local Music</span>
+            </button>
+            <button type="button" onclick="document.getElementById('ycExtractVideoInput').click()" class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50">
+              <span class="w-12 h-12 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-lg"><i class="fa-solid fa-headphones"></i></span>
+              <span class="text-xs font-semibold text-gray-700">Extract Audio</span>
+            </button>
+          </div>
+          <button type="button" onclick="document.getElementById('ycAudioInput').click()" class="w-full py-2.5 rounded-lg bg-[#ff5722] text-white font-bold text-xs shadow-sm">
+            Choose Audio File
+          </button>
+          <div class="space-y-2 pt-2">
+            ${state.musicLibrary.length ? state.musicLibrary.map(m => `
+              <button type="button" onclick="openWaveformTrimmer('${m.id}')" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 border border-gray-100 text-left">
+                <span class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-gray-500"><i class="fa-solid fa-music"></i></span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-semibold text-gray-800 truncate">${escapeHtml(m.name)}</div>
+                  <div class="text-[11px] text-gray-400">${fmtTime(m.duration)}</div>
+                </div>
+                <span class="text-[11px] font-bold text-[#ff5722]">Trim &amp; Use</span>
+              </button>
+            `).join('') : '<p class="text-center text-xs text-gray-400 pt-4">Tap Local Music to pick an MP3 / audio file and trim it with live playback.</p>'}
+          </div>`;
+      } else if (state.currentMusicTab === 'effects') {
+        body.innerHTML = `<div class="space-y-2">` + SFX_PRESETS.map(s => `
+          <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100">
+            <div>
+              <div class="text-xs font-semibold text-gray-800">${s.name}</div>
+              <div class="text-[10px] text-gray-400">${s.dur}s Sound Effect</div>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" onclick="previewSynthSfx('${s.id}')" class="px-3 py-1 rounded bg-gray-100 text-xs font-semibold text-gray-700">Play</button>
+              <button type="button" onclick="addSynthSfxToTimeline('${s.id}')" class="px-3 py-1 rounded bg-[#ff5722] text-xs font-bold text-white">USE</button>
+            </div>
+          </div>
+        `).join('') + `</div>`;
+      } else {
+        body.innerHTML = `
+          <div class="text-center py-8 space-y-4">
+            <button type="button" id="ycVoiceRecBtn" onclick="toggleVoiceRecord()" class="w-16 h-16 rounded-full ${state.isRecordingVoice ? 'bg-red-600 animate-pulse' : 'bg-[#ff5722]'} text-white text-xl shadow-lg mx-auto flex items-center justify-center">
+              <i class="fa-solid fa-microphone"></i>
+            </button>
+            <div class="text-xs font-semibold text-gray-700">${state.isRecordingVoice ? 'Recording... Tap to Stop' : 'Tap Mic to Record Voiceover'}</div>
+          </div>`;
+      }
+    }
+
+    async function handleAudioUpload(files) {
+      if (!files || !files.length) return;
+      const file = files[0];
+      const url = URL.createObjectURL(file);
+      await loadAudioIntoLibrary(file.name, url, file);
+      document.getElementById('ycAudioInput').value = '';
+    }
+
+    async function handleExtractAudioFromVideo(files) {
+      if (!files || !files.length) return;
+      const file = files[0];
+      const url = URL.createObjectURL(file);
+      await loadAudioIntoLibrary('Extracted: ' + file.name, url, file);
+      document.getElementById('ycExtractVideoInput').value = '';
+    }
+
+    async function loadAudioIntoLibrary(name, url, file) {
+      const audio = new Audio(url);
+      await new Promise(r => { audio.onloadedmetadata = r; audio.onerror = r; });
+      const duration = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 10;
+
+      // Generate real waveform peaks
+      let waveform = Array.from({ length: 64 }, () => 0.25 + Math.random() * 0.65);
+      try {
+        const buf = await file.arrayBuffer();
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const decoded = await ac.decodeAudioData(buf);
+        const ch = decoded.getChannelData(0);
+        const step = Math.max(1, Math.floor(ch.length / 64));
+        waveform = [];
+        for (let i = 0; i < 64; i++) {
+          let peak = 0;
+          for (let j = 0; j < step; j++) {
+            const val = Math.abs(ch[i * step + j] || 0);
+            if (val > peak) peak = val;
+          }
+          waveform.push(Math.max(0.12, peak));
+        }
+        ac.close();
+      } catch (e) {}
+
+      const item = { id: 'aud_' + Date.now(), name, url, duration, waveform };
+      state.musicLibrary.unshift(item);
+      renderMusicBody();
+      openWaveformTrimmer(item.id);
+    }
+
+    function openWaveformTrimmer(id) {
+      const item = state.musicLibrary.find(m => m.id === id);
+      if (!item) return;
+      stopPendingAudioPreview();
+
+      const el = new Audio(item.url);
+      state.pendingAudio = {
+        ...item,
+        trimStart: 0,
+        trimEnd: item.duration,
+        previewEl: el,
+        playing: false
+      };
+
+      document.getElementById('ycAudioTrimmerBar').classList.remove('hidden');
+      document.getElementById('ycTrimAudioName').textContent = item.name;
+      document.getElementById('ycTrimAudioDur').textContent = fmtTime(item.duration);
+
+      const sSlider = document.getElementById('ycAudioTrimStartSlider');
+      const eSlider = document.getElementById('ycAudioTrimEndSlider');
+      sSlider.max = item.duration;
+      sSlider.value = 0;
+      eSlider.max = item.duration;
+      eSlider.value = item.duration;
+
+      updateAudioTrimPreview();
+    }
+
+    function updateAudioTrimPreview() {
+      const p = state.pendingAudio;
+      if (!p) return;
+      let s = parseFloat(document.getElementById('ycAudioTrimStartSlider').value);
+      let e = parseFloat(document.getElementById('ycAudioTrimEndSlider').value);
+      if (s >= e - 0.2) s = Math.max(0, e - 0.2);
+      p.trimStart = s;
+      p.trimEnd = e;
+
+      document.getElementById('ycTrimAudioStart').textContent = fmtTime(s);
+      document.getElementById('ycTrimAudioEnd').textContent = fmtTime(e);
+      document.getElementById('ycTrimAudioMid').textContent = `${fmtTime(e - s)} / ${fmtTime(p.duration)}`;
+      document.getElementById('ycTrimStartVal').textContent = s.toFixed(1) + 's';
+      document.getElementById('ycTrimEndVal').textContent = e.toFixed(1) + 's';
+
+      drawWaveformBars(p.waveform, s / p.duration, e / p.duration);
+    }
+
+    function drawWaveformBars(waveform, startFrac, endFrac) {
+      const wc = document.getElementById('ycWaveformCanvas');
+      const wctx = wc.getContext('2d');
+      wctx.clearRect(0, 0, wc.width, wc.height);
+      const n = waveform.length;
+      const barW = wc.width / n;
+      for (let i = 0; i < n; i++) {
+        const frac = i / n;
+        const active = frac >= startFrac && frac <= endFrac;
+        wctx.fillStyle = active ? '#ff5722' : '#525252';
+        const bh = Math.max(4, waveform[i] * (wc.height - 8));
+        wctx.fillRect(i * barW + 1, (wc.height - bh) / 2, Math.max(2, barW - 2), bh);
+      }
+    }
+
+    let audioPreviewTimer = null;
+    function toggleAudioPreviewPlay() {
+      const p = state.pendingAudio;
+      if (!p || !p.previewEl) return;
+      const btn = document.getElementById('ycAudioPreviewPlayBtn');
+      if (p.playing) {
+        stopPendingAudioPreview();
+      } else {
+        p.previewEl.currentTime = p.trimStart;
+        p.previewEl.play().catch(() => {});
+        p.playing = true;
+        btn.innerHTML = '<i class="fa-solid fa-pause text-xs"></i>';
+        audioPreviewTimer = setInterval(() => {
+          if (!p.playing) return;
+          if (p.previewEl.currentTime >= p.trimEnd) {
+            p.previewEl.currentTime = p.trimStart;
+          }
+        }, 80);
+      }
+    }
+
+    function stopPendingAudioPreview() {
+      if (audioPreviewTimer) clearInterval(audioPreviewTimer);
+      if (state.pendingAudio && state.pendingAudio.previewEl) {
+        state.pendingAudio.previewEl.pause();
+        state.pendingAudio.playing = false;
+      }
+      const btn = document.getElementById('ycAudioPreviewPlayBtn');
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-play text-xs"></i>';
+    }
+
+    function confirmUseTrimmedAudio() {
+      const p = state.pendingAudio;
+      if (!p) return;
+      stopPendingAudioPreview();
+      saveSnapshot();
+      state.audioClips.push({
+        id: 'ac_' + Date.now(),
+        name: p.name,
+        url: p.url,
+        audioEl: new Audio(p.url),
+        startAt: state.playhead,
+        trimStart: p.trimStart,
+        trimEnd: p.trimEnd,
+        volume: 1,
+        waveform: p.waveform
+      });
+      document.getElementById('ycAudioTrimmerBar').classList.add('hidden');
+      closeMusicModal();
+      recomputeDuration();
+      renderTimeline();
+    }
+
+    // Synthesized SFX + Voiceover
+    function makeSfxWavUrl(preset) {
+      const sr = 22050;
+      const len = Math.floor(sr * preset.dur);
+      const buf = new ArrayBuffer(44 + len * 2);
+      const view = new DataView(buf);
+      const writeStr = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+      writeStr(0, 'RIFF'); view.setUint32(4, 36 + len * 2, true); writeStr(8, 'WAVE');
+      writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true); view.setUint32(24, sr, true); view.setUint32(28, sr * 2, true);
+      view.setUint16(32, 2, true); view.setUint16(34, 16, true); writeStr(36, 'data');
+      view.setUint32(40, len * 2, true);
+      for (let i = 0; i < len; i++) {
+        const t = i / sr;
+        const env = Math.max(0, 1 - t / preset.dur);
+        const sample = Math.sin(2 * Math.PI * preset.freq * t) * env * 0.6;
+        view.setInt16(44 + i * 2, sample * 32767, true);
+      }
+      return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+    }
+
+    function previewSynthSfx(id) {
+      const p = SFX_PRESETS.find(s => s.id === id);
+      if (!p) return;
+      new Audio(makeSfxWavUrl(p)).play().catch(() => {});
+    }
+
+    function addSynthSfxToTimeline(id) {
+      const p = SFX_PRESETS.find(s => s.id === id);
+      if (!p) return;
+      const url = makeSfxWavUrl(p);
+      saveSnapshot();
+      state.audioClips.push({
+        id: 'ac_' + Date.now(), name: p.name, url, audioEl: new Audio(url),
+        startAt: state.playhead, trimStart: 0, trimEnd: p.dur, volume: 1, waveform: []
+      });
+      closeMusicModal();
+      recomputeDuration();
+      renderTimeline();
+    }
+
+    async function toggleVoiceRecord() {
+      if (state.isRecordingVoice && state.mediaRecorder) {
+        state.mediaRecorder.stop();
+        state.isRecordingVoice = false;
+        renderMusicBody();
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        state.voiceChunks = [];
+        const mr = new MediaRecorder(stream);
+        mr.ondataavailable = e => { if (e.data.size > 0) state.voiceChunks.push(e.data); };
+        mr.onstop = async () => {
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(state.voiceChunks, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          await loadAudioIntoLibrary('Voiceover_' + new Date().toLocaleTimeString(), url, blob);
+          switchMusicTab('mymusic');
+        };
+        mr.start();
+        state.mediaRecorder = mr;
+        state.isRecordingVoice = true;
+        renderMusicBody();
+      } catch (e) {
+        showToast('Microphone permission is needed for Voiceover.');
+      }
+    }
+
+    function updateSelectedAudioVol(val) {
+      const ac = state.audioClips.find(a => a.id === state.selectedAudioId);
+      if (ac) ac.volume = parseFloat(val);
+    }
+
+    function deleteSelectedAudio() {
+      saveSnapshot();
+      state.audioClips = state.audioClips.filter(a => a.id !== state.selectedAudioId);
+      state.selectedAudioId = null;
+      closeToolDrawer();
+      recomputeDuration();
+      renderTimeline();
+    }
+
+    // ==================== EXPORT / SAVE VIDEO ====================
+    function openExportModal() {
+      if (!state.clips.length) { showToast('Please add at least one video or photo first.'); return; }
+      pausePlayback();
+      document.getElementById('ycExportProgressWrap').classList.add('hidden');
+      document.getElementById('ycStartExportBtn').disabled = false;
+      document.getElementById('ycExportModal').classList.remove('hidden');
+    }
+
+    function closeExportModal() {
+      document.getElementById('ycExportModal').classList.add('hidden');
+    }
+
+    async function startVideoExport() {
+      const btn = document.getElementById('ycStartExportBtn');
+      const wrap = document.getElementById('ycExportProgressWrap');
+      const bar = document.getElementById('ycExportBar');
+      const status = document.getElementById('ycExportStatus');
+      btn.disabled = true;
+      wrap.classList.remove('hidden');
+      status.textContent = 'Rendering video...';
+
+      const fps = parseInt(document.getElementById('ycExportFps').value, 10) || 30;
+      const stream = canvas.captureStream(fps);
+      const mime = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
+      const chunks = [];
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+      const donePromise = new Promise(res => { rec.onstop = res; });
+      rec.start();
+
+      state.playhead = 0;
+      startPlayback();
+
+      const timer = setInterval(() => {
+        const pct = state.totalDuration > 0 ? Math.min(100, Math.round((state.playhead / state.totalDuration) * 100)) : 100;
+        bar.style.width = pct + '%';
+        status.textContent = `Exporting ${pct}%...`;
+        if (!state.isPlaying) {
+          clearInterval(timer);
+          rec.stop();
+        }
+      }, 100);
+
+      await donePromise;
+      const blob = new Blob(chunks, { type: mime });
+      const dlUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = dlUrl;
+      a.download = `YugaCut_${Date.now()}.${mime === 'video/mp4' ? 'mp4' : 'webm'}`;
+      a.click();
+      status.textContent = 'Saved! Check your Downloads.';
+      btn.disabled = false;
+    }
+
+    
+    function showToast(msg) {
+      const t = document.getElementById('ycToast');
+      if (!t) return;
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 2600);
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+    }
+
+    // Init
+    renderToolbar();
+    renderTimeline();
+  </script>
+<div id="ycToast" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg"></div>
+</body>
+</html>
