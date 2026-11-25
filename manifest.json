@@ -1,0 +1,25 @@
+{
+  "name": "YugaCut AI — Video Editor",
+  "short_name": "YugaCut",
+  "description": "Free Multi-Track Video Editor with Music Waveform, Chroma Key, AI Captions & No Watermark.",
+  "start_url": "/yugacut/",
+  "scope": "/yugacut/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ff5722",
+  "icons": [
+    {
+      "src": "/yugacut/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/yugacut/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
