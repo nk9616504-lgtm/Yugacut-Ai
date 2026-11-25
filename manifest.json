@@ -1,6 +1,6 @@
 {
-  "name": "YugaCut AI — Video Editor",
-  "short_name": "YugaCut",
+  "name": "YugaCut Studio — Video Editor",
+  "short_name": "YugaCut Studio",
   "description": "Free Multi-Track Video Editor with Music Waveform, Chroma Key, AI Captions & No Watermark.",
   "start_url": "/yugacut/",
   "scope": "/yugacut/",
