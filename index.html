@@ -163,8 +163,8 @@
     </header>
 
     <!-- PREVIEW STAGE -->
-    <main class="flex-1 flex flex-col items-center justify-center bg-[#f4f5f7] px-3 py-1.5 relative overflow-hidden">
-      <div id="ycStageWrap" class="relative bg-black rounded-md overflow-hidden shadow-md flex items-center justify-center" style="width: 170px; height: 280px;">
+    <main class="flex-1 flex flex-col items-center justify-center bg-white px-3 py-1 relative overflow-hidden">
+      <div id="ycStageWrap" class="relative bg-black rounded-md overflow-hidden shadow-md flex items-center justify-center" style="width: 205px; height: 340px;">
         <canvas id="ycPreviewCanvas" width="540" height="960" class="w-full h-full object-contain touch-none cursor-move"></canvas>
         <button id="ycEmptyTap" type="button" onclick="document.getElementById('ycMediaInput').click()" class="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white gap-2 hover:bg-black/40 transition">
           <span class="w-11 h-11 rounded-full bg-[#ff5722] flex items-center justify-center text-lg shadow"><i class="fa-solid fa-plus"></i></span>
@@ -222,14 +222,14 @@
           </button>
         </div>
 
-        <div class="flex-1 relative bg-[#f8f9fa] rounded-lg border border-gray-200 overflow-hidden">
+        <div class="flex-1 relative bg-white overflow-hidden">
           <div id="ycPlayhead" class="pointer-events-none absolute top-0 bottom-0 w-[2px] bg-[#ff5722] z-20" style="left: 40px;">
-            <div class="w-2.5 h-2.5 bg-[#ff5722] rounded-full -ml-[4px] -mt-0.5 shadow"></div>
+            <div class="w-2 h-2 bg-[#ff5722] rounded-full -ml-[3px] shadow"></div>
           </div>
 
-          <div id="ycTimelineViewport" class="w-full overflow-x-auto yc-scroll py-1.5" onscroll="handleTimelineScroll()">
-            <div id="ycTracksWrap" class="relative space-y-1 inline-block" style="padding-left: 40px; padding-right: 400px; width: max-content;">
-              <div id="ycRulerTrack" class="h-3.5 relative text-[9px] font-semibold text-gray-400 select-none"></div>
+          <div id="ycTimelineViewport" class="w-full overflow-x-auto yc-scroll pt-3 pb-1" onscroll="handleTimelineScroll()">
+            <div id="ycTracksWrap" class="relative flex flex-col justify-end min-h-[118px] space-y-1" style="padding-left: 40px; padding-right: 400px; width: max-content;">
+              <div id="ycRulerTrack" class="h-3 relative text-[8.5px] font-semibold text-gray-400 select-none mb-auto"></div>
               <div id="ycOverlayLanes" class="space-y-1"></div>
               <div id="ycAudioLanes" class="space-y-1"></div>
               <div id="ycVideoTrack" class="h-12 flex items-center gap-0"></div>
@@ -373,6 +373,7 @@
       mediaRecorder: null,
       voiceChunks: [],
       isRecordingVoice: false,
+      isExporting: false,
       textTab: 'edit',
       textColorSub: 'text',
       textAnimSub: 'in',
@@ -535,7 +536,7 @@
       state.ratio = ratio;
       document.getElementById('ycRatioSelect').value = ratio;
       const wrap = document.getElementById('ycStageWrap');
-      if (ratio === '9:16') { canvas.width = 540; canvas.height = 960; wrap.style.width = '170px'; wrap.style.height = '280px'; }
+      if (ratio === '9:16') { canvas.width = 540; canvas.height = 960; wrap.style.width = '205px'; wrap.style.height = '340px'; }
       else if (ratio === '16:9') { canvas.width = 960; canvas.height = 540; wrap.style.width = '300px'; wrap.style.height = '168px'; }
       else if (ratio === '1:1') { canvas.width = 720; canvas.height = 720; wrap.style.width = '236px'; wrap.style.height = '236px'; }
       else if (ratio === '4:5') { canvas.width = 720; canvas.height = 900; wrap.style.width = '206px'; wrap.style.height = '258px'; }
@@ -549,13 +550,13 @@
     function saveThumbnailCover() {
       if (!state.clips.length) { showToast('Add a video or photo first.'); return; }
       const wasSafe = state.safeZone;
-      state.safeZone = false;
+      state.safeZone = false; state.isExporting = true;
       drawFrame();
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');
       a.download = `YugaCut_Cover_${Date.now()}.png`;
       a.click();
-      state.safeZone = wasSafe;
+      state.safeZone = wasSafe; state.isExporting = false;
       drawFrame();
       showToast('Thumbnail Cover PNG saved!');
     }
@@ -775,19 +776,30 @@
             const w = Math.max(46, Math.round(o.duration * state.pxPerSec));
             const isSel = state.selectedOverlayId === o.id;
             const icon = o.kind === 'text' ? 'T' : o.kind === 'blur' ? '░' : (o.kind === 'png' || o.kind === 'pip') ? '🖼' : '★';
-            const cls = o.kind === 'text' ? 'bg-sky-100 border-sky-300 text-sky-900' : 'bg-purple-100 border-purple-300 text-purple-900';
+            const isText = o.kind === 'text';
+            if (!isSel) {
+              const barColor = isText ? 'bg-sky-400' : 'bg-emerald-400';
+              return `
+                <div onclick="selectOverlay('${o.id}', event)" title="${escapeHtml(o.text)}" style="position:absolute; left:${left}px; width:${w}px;"
+                  class="h-2.5 rounded-full ${barColor} opacity-90 cursor-pointer flex items-center px-1.5 overflow-hidden">
+                  <span class="text-[7.5px] font-bold text-white truncate leading-none">${icon} ${escapeHtml(o.text)}</span>
+                </div>`;
+            }
+            const selBg = isText ? 'bg-sky-400 text-slate-950' : 'bg-emerald-400 text-slate-950';
             return `
               <div onclick="selectOverlay('${o.id}', event)" style="position:absolute; left:${left}px; width:${w}px;"
-                class="h-6 rounded border ${isSel ? 'border-[#ff5722] ring-1 ring-[#ff5722] bg-sky-200 text-sky-950' : cls} flex items-center overflow-hidden cursor-pointer select-none">
-                ${isSel ? `<span onpointerdown="startOverlayResize('${o.id}','left',event)" class="w-4 h-full bg-[#ff5722] text-white flex items-center justify-center text-[9px] font-black cursor-ew-resize flex-shrink-0 touch-none">&lsaquo;</span>` : ''}
+                class="h-6 rounded ${selBg} ring-1 ring-[#0284c7] flex items-center overflow-hidden cursor-pointer select-none shadow-sm">
+                <span onpointerdown="startOverlayResize('${o.id}','left',event)" class="w-4 h-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black cursor-ew-resize flex-shrink-0 touch-none">&lsaquo;</span>
                 <div onpointerdown="startTimelineDrag('overlay','${o.id}',event)" class="flex-1 min-w-0 px-1 flex items-center gap-1 touch-none">
-                  <span class="text-[9px] font-bold">${icon}</span>
-                  <span class="text-[9.5px] font-medium truncate">${escapeHtml(o.text)}</span>
+                  <span class="text-[9px] font-black">${icon}</span>
+                  <span class="text-[9.5px] font-semibold truncate">${escapeHtml(o.text)}</span>
+                  <span class="text-[8px] font-bold bg-black/25 text-white px-1 rounded ml-auto">${fmtTime(o.duration)}</span>
                 </div>
-                ${isSel ? `<span onpointerdown="startOverlayResize('${o.id}','right',event)" class="w-4 h-full bg-[#ff5722] text-white flex items-center justify-center text-[9px] font-black cursor-ew-resize flex-shrink-0 touch-none">&rsaquo;</span>` : ''}
+                <span onpointerdown="startOverlayResize('${o.id}','right',event)" class="w-4 h-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-black cursor-ew-resize flex-shrink-0 touch-none">&rsaquo;</span>
               </div>`;
           }).join('');
-          return `<div class="relative h-6" style="width:${totalPx}px">${itemsHtml}</div>`;
+          const laneHasSel = lane.some(o => o.id === state.selectedOverlayId);
+          return `<div class="relative ${laneHasSel ? 'h-6' : 'h-2.5'}" style="width:${totalPx}px">${itemsHtml}</div>`;
         }).join('');
       }
 
@@ -802,15 +814,23 @@
             const left = Math.round(a.startAt * state.pxPerSec);
             const w = Math.max(52, Math.round(dur * state.pxPerSec));
             const isSel = state.selectedAudioId === a.id;
+            if (!isSel) {
+              return `
+                <div onclick="selectAudioClip('${a.id}', event)" onpointerdown="startTimelineDrag('audio','${a.id}',event)" style="position:absolute; left:${left}px; width:${w}px;"
+                  class="h-2.5 rounded-full bg-amber-400 cursor-grab active:cursor-grabbing touch-none flex items-center px-1.5 overflow-hidden">
+                  <span class="text-[7.5px] font-bold text-amber-950 truncate leading-none">♪ ${escapeHtml(a.name)}</span>
+                </div>`;
+            }
             return `
               <div onclick="selectAudioClip('${a.id}', event)" onpointerdown="startTimelineDrag('audio','${a.id}',event)" style="position:absolute; left:${left}px; width:${w}px;"
-                class="h-6 rounded bg-amber-300/90 border ${isSel ? 'border-[#ff5722] ring-1 ring-[#ff5722]' : 'border-amber-400'} px-1.5 flex items-center gap-1 cursor-grab active:cursor-grabbing touch-none">
+                class="h-6 rounded bg-amber-300 border border-[#ff5722] ring-1 ring-[#ff5722] px-1.5 flex items-center gap-1 cursor-grab active:cursor-grabbing touch-none shadow-sm">
                 <i class="fa-solid fa-music text-[9px] text-amber-950"></i>
                 <span class="text-[10px] font-bold text-amber-950 truncate">${escapeHtml(a.name)}</span>
                 <span class="text-[9px] font-semibold text-amber-900 ml-auto">${fmtTime(dur)}</span>
               </div>`;
           }).join('');
-          return `<div class="relative h-6" style="width:${totalPx}px">${itemsHtml}</div>`;
+          const laneHasSel = lane.some(a => a.id === state.selectedAudioId);
+          return `<div class="relative ${laneHasSel ? 'h-6' : 'h-2.5'}" style="width:${totalPx}px">${itemsHtml}</div>`;
         }).join('');
       }
 
@@ -1812,6 +1832,28 @@
         ctx.textAlign = 'right'; ctx.fillText(state.watermarkText, canvas.width - 18, 36); ctx.restore();
       }
 
+      // On-Canvas Selection Box for selected Overlay (like YouCut)
+      if (!state.isExporting && state.selectedOverlayId) {
+        const sel = state.overlays.find(o => o.id === state.selectedOverlayId);
+        if (sel && state.playhead >= sel.startAt && state.playhead <= sel.startAt + sel.duration) {
+          let sx = sel.x, sy = sel.y;
+          if (sel.keyframe && sel.startX != null && sel.endX != null) {
+            const p = Math.min(1, Math.max(0, (state.playhead - sel.startAt) / Math.max(0.1, sel.duration)));
+            sx = sel.startX + (sel.endX - sel.startX) * p;
+            sy = sel.startY + (sel.endY - sel.startY) * p;
+          }
+          const bw = Math.max(120, (sel.size || 40) * 2.6);
+          const bh = Math.max(54, (sel.size || 40) * 1.4);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+          ctx.lineWidth = 2.5;
+          ctx.strokeRect(sx - bw/2, sy - bh/2, bw, bh);
+          ctx.fillStyle = '#ff5722';
+          ctx.beginPath(); ctx.arc(sx + bw/2, sy + bh/2, 9, 0, Math.PI*2); ctx.fill();
+          ctx.restore();
+        }
+      }
+
       // Safe Zone Guide
       if (state.safeZone) {
         ctx.save(); ctx.strokeStyle = 'rgba(255,87,34,0.75)'; ctx.setLineDash([6, 6]); ctx.lineWidth = 2;
@@ -2137,7 +2179,7 @@
       }
       rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       const donePromise = new Promise(res => { rec.onstop = res; });
-      rec.start(); state.playhead = 0; startPlayback();
+      state.isExporting = true; rec.start(); state.playhead = 0; startPlayback();
 
       const timer = setInterval(() => {
         const pct = state.totalDuration > 0 ? Math.min(100, Math.round((state.playhead / state.totalDuration) * 100)) : 100;
@@ -2146,6 +2188,7 @@
       }, 100);
 
       await donePromise;
+      state.isExporting = false;
       if (mixCtx) mixCtx.close().catch(() => {});
       const ext = mime === 'video/mp4' ? 'mp4' : 'webm', blob = new Blob(chunks, { type: mime }), fileName = `YugaCut_${Date.now()}.${ext}`;
 
