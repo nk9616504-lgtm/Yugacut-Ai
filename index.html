@@ -130,10 +130,10 @@
   </div>
 
   <!-- ==================== 2. MAIN EDITOR SCREEN ==================== -->
-  <div id="ycEditorScreen" class="min-h-screen flex flex-col justify-between bg-white">
+  <div id="ycEditorScreen" class="h-[100dvh] flex flex-col justify-between bg-white overflow-hidden">
 
     <!-- TOP BAR -->
-    <header class="px-2.5 py-2 flex items-center justify-between border-b border-gray-100 bg-white">
+    <header class="sticky top-0 z-30 flex-shrink-0 px-2.5 py-2 flex items-center justify-between border-b border-gray-100 bg-white">
       <div class="flex items-center gap-1.5">
         <button type="button" onclick="goHome()" class="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600" title="Home">
           <i class="fa-solid fa-arrow-left text-xs"></i>
@@ -164,7 +164,7 @@
 
     <!-- PREVIEW STAGE -->
     <main class="flex-1 flex flex-col items-center justify-center bg-[#f4f5f7] px-3 py-1.5 relative overflow-hidden">
-      <div id="ycStageWrap" class="relative bg-black rounded-md overflow-hidden shadow-md flex items-center justify-center" style="width: 186px; height: 320px;">
+      <div id="ycStageWrap" class="relative bg-black rounded-md overflow-hidden shadow-md flex items-center justify-center" style="width: 170px; height: 280px;">
         <canvas id="ycPreviewCanvas" width="540" height="960" class="w-full h-full object-contain touch-none cursor-move"></canvas>
         <button id="ycEmptyTap" type="button" onclick="document.getElementById('ycMediaInput').click()" class="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white gap-2 hover:bg-black/40 transition">
           <span class="w-11 h-11 rounded-full bg-[#ff5722] flex items-center justify-center text-lg shadow"><i class="fa-solid fa-plus"></i></span>
@@ -535,7 +535,7 @@
       state.ratio = ratio;
       document.getElementById('ycRatioSelect').value = ratio;
       const wrap = document.getElementById('ycStageWrap');
-      if (ratio === '9:16') { canvas.width = 540; canvas.height = 960; wrap.style.width = '186px'; wrap.style.height = '320px'; }
+      if (ratio === '9:16') { canvas.width = 540; canvas.height = 960; wrap.style.width = '170px'; wrap.style.height = '280px'; }
       else if (ratio === '16:9') { canvas.width = 960; canvas.height = 540; wrap.style.width = '300px'; wrap.style.height = '168px'; }
       else if (ratio === '1:1') { canvas.width = 720; canvas.height = 720; wrap.style.width = '236px'; wrap.style.height = '236px'; }
       else if (ratio === '4:5') { canvas.width = 720; canvas.height = 900; wrap.style.width = '206px'; wrap.style.height = '258px'; }
@@ -894,7 +894,7 @@
         collapseBtn.classList.remove('hidden');
         const items = [
           ['addNewText', 'fa-plus', 'Add Text'],
-          ['text', 'fa-pen-to-square', 'Edit'],
+          ['ovEdit', 'fa-pen-to-square', 'Edit'],
           ['ovSplit', 'fa-grip-lines-vertical', 'Split'],
           ['ovToEnd', 'fa-angles-right', 'To End'],
           ['ovKeyframe', 'fa-diamond', 'Motion'],
@@ -966,6 +966,7 @@
       if (toolId === 'music') { openMusicModal(); return; }
       if (toolId === 'addNewText') { state.selectedOverlayId = null; renderTimeline(); openTool('text'); return; }
       if (toolId === 'ovSplit') { splitSelectedOverlayAtPlayhead(); return; }
+      if (toolId === 'ovEdit') { const ov = state.overlays.find(o => o.id === state.selectedOverlayId); openTool(ov && ov.kind === 'text' ? 'text' : (ov && ov.kind === 'pip' ? 'pip' : 'sticker')); return; }
       if (toolId === 'ovToEnd') { stretchOverlayToVideoEnd(); return; }
       if (toolId === 'ovCopy') { duplicateSelectedOverlay(); return; }
       if (toolId === 'ovDelete') { deleteSelectedOverlay(); return; }
@@ -1114,6 +1115,10 @@
         body.innerHTML = tabBar + tabBody;
       } else if (toolId === 'sticker') {
         title.textContent = 'Stickers, PNG, QR, Social & Blur';
+        const isFontCard = ovAny && (ovAny.kind === 'badge' || ovAny.kind === 'social');
+        const minSz = isFontCard ? 14 : 36;
+        const maxSz = isFontCard ? 46 : 260;
+        const curSz = ovAny ? Math.max(minSz, Math.min(maxSz, ovAny.size || 24)) : 24;
         body.innerHTML = `
           <div class="flex items-center gap-1.5 overflow-x-auto yc-scroll py-1">
             <button type="button" onclick="document.getElementById('ycPngStickerInput').click()" class="px-2.5 py-1.5 rounded-lg bg-[#ff5722] text-white text-[10.5px] font-bold flex-shrink-0">+ PNG</button>
@@ -1123,7 +1128,18 @@
             ${BADGE_STICKERS.map(b => `<button type="button" onclick="addBadgeSticker('${b.id}')" style="background:${b.bg};color:${b.fg}" class="px-2.5 py-1 rounded-full text-[10px] font-extrabold flex-shrink-0">${b.label}</button>`).join('')}
             ${STICKERS.map(s => `<button type="button" onclick="addSticker('${s}')" class="w-8 h-8 rounded-lg bg-white border border-gray-200 text-base flex items-center justify-center flex-shrink-0">${s}</button>`).join('')}
           </div>
-          ${ovAny ? `<div class="flex items-center gap-3 pt-1"><span class="text-[10px]">Size</span><input type="range" min="30" max="260" step="4" value="${ovAny.size}" oninput="updateOverlayProp('size',this.value)" class="flex-1 yc-range" /><button type="button" onclick="stretchOverlayToVideoEnd()" class="px-2 py-1 rounded bg-orange-50 border border-[#ff5722] text-[#ff5722] font-bold text-[10px]">To End</button></div>` : ''}`;
+          ${isFontCard ? `
+            <div class="flex gap-1.5 pt-1">
+              <input id="ycCardTitleIn" type="text" value="${escapeHtml(ovAny.text)}" placeholder="Handle / Badge text" class="flex-1 border border-gray-200 rounded px-2 py-1 bg-white text-[11px]" />
+              ${ovAny.kind === 'social' ? `<input id="ycCardSubIn" type="text" value="${escapeHtml(ovAny.subText||'')}" placeholder="Subtitle" class="flex-1 border border-gray-200 rounded px-2 py-1 bg-white text-[11px]" />` : ''}
+              <button type="button" onclick="saveSocialOrBadgeEdit()" class="px-2.5 py-1 rounded bg-[#ff5722] text-white font-bold text-[10.5px]">Save</button>
+            </div>` : ''}
+          ${ovAny ? `
+            <div class="flex items-center gap-2 pt-1">
+              <span class="text-[10px]">Size</span>
+              <input type="range" min="${minSz}" max="${maxSz}" step="1" value="${curSz}" oninput="updateOverlayProp('size',this.value)" class="flex-1 yc-range" />
+              <button type="button" onclick="stretchOverlayToVideoEnd()" class="px-2 py-1 rounded bg-orange-50 border border-[#ff5722] text-[#ff5722] font-bold text-[10px]">To End</button>
+            </div>` : ''}`;
       } else if (toolId === 'pip') {
         title.textContent = 'Video/Photo PIP & Chroma Key';
         const pip = ovAny && ovAny.kind === 'pip' ? ovAny : null;
@@ -1338,7 +1354,7 @@
     function addBadgeSticker(id) {
       const b = BADGE_STICKERS.find(x => x.id === id); if (!b) return;
       saveSnapshot();
-      const ov = { id: 'ov_' + Date.now(), kind: 'badge', text: b.label, color: b.fg, labelBg: b.bg, x: canvas.width/2, y: canvas.height*0.82, size: 28, startAt: state.playhead, duration: 4 };
+      const ov = { id: 'ov_' + Date.now(), kind: 'badge', text: b.label, color: b.fg, labelBg: b.bg, x: canvas.width/2, y: canvas.height*0.82, size: 22, startAt: state.playhead, duration: 4 };
       state.overlays.push(ov); state.selectedOverlayId = ov.id;
       recomputeDuration(); renderTimeline(); openTool('sticker'); drawFrame();
     }
@@ -1469,6 +1485,16 @@
       if (state.textAnimSub === 'in') o.animIn = anim; else if (state.textAnimSub === 'out') o.animOut = anim; else o.animLoop = anim;
       openTool('text'); drawFrame();
     }
+    function saveSocialOrBadgeEdit() {
+      const o = state.overlays.find(x => x.id === state.selectedOverlayId);
+      if (!o) return;
+      const tEl = document.getElementById('ycCardTitleIn');
+      const sEl = document.getElementById('ycCardSubIn');
+      if (tEl && tEl.value.trim()) o.text = tEl.value.trim();
+      if (sEl) o.subText = sEl.value.trim();
+      renderTimeline(); drawFrame();
+      showToast('Updated!');
+    }
     function updateOverlayProp(prop, val) { const o = state.overlays.find(x => x.id === state.selectedOverlayId); if (o) { o[prop] = parseFloat(val); recomputeDuration(); renderTimeline(); drawFrame(); } }
 
     let resizingOv = null;
@@ -1520,7 +1546,7 @@
       const rect = canvas.getBoundingClientRect();
       const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
       const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-      const hit = [...state.overlays].reverse().find(o => state.playhead >= o.startAt && state.playhead <= o.startAt + o.duration && Math.abs(o.x - cx) < 130 && Math.abs(o.y - cy) < 70);
+      const hit = [...state.overlays].reverse().find(o => state.playhead >= o.startAt && state.playhead <= o.startAt + o.duration && Math.abs(o.x - cx) < 180 && Math.abs(o.y - cy) < 95);
       if (hit) { draggingOverlay = hit; state.selectedOverlayId = hit.id; }
     });
     canvas.addEventListener('pointermove', e => {
@@ -1730,14 +1756,17 @@
               }
             }
           } else if (o.kind === 'social') {
+            const sSc = Math.min(1.6, Math.max(0.6, (o.size || 24) / 24));
+            ctx.translate(ox, oy); ctx.scale(sSc, sSc); ox = 0; oy = 0;
             ctx.fillStyle = 'rgba(17,24,39,0.82)';
-            ctx.beginPath(); ctx.roundRect(ox - 135, oy - 28, 270, 56, 14); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(-135, -28, 270, 56, 14); ctx.fill();
             ctx.fillStyle = '#ff5722'; ctx.beginPath(); ctx.arc(ox - 102, oy, 16, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(o.text, ox - 76, oy - 4);
             ctx.fillStyle = '#d1d5db'; ctx.font = '12px sans-serif'; ctx.fillText(o.subText || 'Subscribe', ox - 76, oy + 14);
           } else if (o.kind === 'badge') {
-            ctx.font = `900 ${o.size}px sans-serif`;
-            const tw = ctx.measureText(o.text).width, bw = tw + 34, bh = o.size + 22;
+            const bSz = Math.min(46, Math.max(14, o.size || 24));
+            ctx.font = `900 ${bSz}px sans-serif`;
+            const tw = ctx.measureText(o.text).width, bw = tw + 28, bh = bSz + 18;
             ctx.fillStyle = o.labelBg || '#dc2626';
             ctx.beginPath(); ctx.roundRect(ox - bw/2, oy - bh/2, bw, bh, 999); ctx.fill();
             ctx.fillStyle = o.color || '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
