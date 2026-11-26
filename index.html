@@ -87,7 +87,7 @@
     <div class="flex items-center justify-between px-4 pt-4">
       <div class="flex items-center gap-2">
         <span class="text-xl font-black tracking-tight text-gray-900">YugaCut <span class="text-[#ff5722]">Studio</span></span>
-        <span class="bg-white text-[#ff5722] text-[11px] font-extrabold px-2 py-0.5 rounded-full shadow-sm">Pro Free</span>
+        <button type="button" id="ycHomeProBadge" onclick="openProModal()" class="bg-gradient-to-r from-[#ff5722] to-amber-500 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1"><i class="fa-solid fa-crown text-[10px]"></i> <span>Pro</span></button>
       </div>
       <div class="flex items-center gap-2">
         <button type="button" onclick="location.reload()" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 shadow-sm text-xs" title="Refresh App">
@@ -338,6 +338,73 @@
     </div>
   </div>
 
+  <!-- ==================== 5. PRO MODAL (YouCut-Style Benefits + Launch Offer Free) ==================== -->
+  <div id="ycProModal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl max-h-[90dvh] flex flex-col">
+      <!-- Top Banner -->
+      <div class="relative bg-gradient-to-br from-slate-900 via-slate-800 to-[#ff5722] text-white p-4">
+        <button type="button" onclick="closeProModal()" class="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center text-white text-xs">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-base font-black">YugaCut Studio</span>
+          <span class="bg-[#ff5722] text-white text-[10px] font-extrabold px-2 py-0.5 rounded">PRO</span>
+        </div>
+        <p class="text-xs text-white/90 font-semibold">Unlock All Pro Features — Free Launch Offer</p>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div class="p-3.5 overflow-y-auto space-y-3 text-xs">
+        <!-- 3 Exclusive Cards -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="p-2 rounded-xl bg-orange-50 border border-orange-100">
+            <i class="fa-solid fa-clapperboard text-[#ff5722] text-base mb-1"></i>
+            <div class="text-[10px] font-bold text-gray-800 leading-tight">Intro &amp; Outro Cards</div>
+          </div>
+          <div class="p-2 rounded-xl bg-amber-50 border border-amber-100">
+            <i class="fa-solid fa-music text-amber-600 text-base mb-1"></i>
+            <div class="text-[10px] font-bold text-gray-800 leading-tight">Featured Long Music</div>
+          </div>
+          <div class="p-2 rounded-xl bg-purple-50 border border-purple-100">
+            <i class="fa-solid fa-wand-magic-sparkles text-purple-600 text-base mb-1"></i>
+            <div class="text-[10px] font-bold text-gray-800 leading-tight">Glitch &amp; Chroma</div>
+          </div>
+        </div>
+
+        <!-- Basic vs Pro Comparison Table -->
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <div class="grid grid-cols-12 bg-gray-50 px-3 py-2 font-bold text-[11px] text-gray-700 border-b border-gray-200">
+            <div class="col-span-6">Features</div>
+            <div class="col-span-3 text-center">Basic</div>
+            <div class="col-span-3 text-center text-[#ff5722]">Pro</div>
+          </div>
+          <div class="divide-y divide-gray-100 text-[11px]">
+            <div class="grid grid-cols-12 px-3 py-1.5 items-center"><div class="col-span-6 font-medium">No Watermark Editing</div><div class="col-span-3 text-center text-gray-500">✓</div><div class="col-span-3 text-center text-[#ff5722] font-bold">✓</div></div>
+            <div class="grid grid-cols-12 px-3 py-1.5 items-center"><div class="col-span-6 font-medium">1080p Full HD Export</div><div class="col-span-3 text-center text-gray-400">✕</div><div class="col-span-3 text-center text-[#ff5722] font-bold">✓</div></div>
+            <div class="grid grid-cols-12 px-3 py-1.5 items-center"><div class="col-span-6 font-medium">AI Speech Captions</div><div class="col-span-3 text-center text-gray-400">✕</div><div class="col-span-3 text-center text-[#ff5722] font-bold">✓</div></div>
+            <div class="grid grid-cols-12 px-3 py-1.5 items-center"><div class="col-span-6 font-medium">Chroma Key (Green Screen)</div><div class="col-span-3 text-center text-gray-400">✕</div><div class="col-span-3 text-center text-[#ff5722] font-bold">✓</div></div>
+            <div class="grid grid-cols-12 px-3 py-1.5 items-center"><div class="col-span-6 font-medium">Featured Music &amp; Beat Sync</div><div class="col-span-3 text-center text-gray-400">✕</div><div class="col-span-3 text-center text-[#ff5722] font-bold">✓</div></div>
+            <div class="grid grid-cols-12 px-3 py-1.5 items-center"><div class="col-span-6 font-medium">Keyframe Motion &amp; FX</div><div class="col-span-3 text-center text-gray-400">✕</div><div class="col-span-3 text-center text-[#ff5722] font-bold">✓</div></div>
+            <div class="grid grid-cols-12 px-3 py-1.5 items-center"><div class="col-span-6 font-medium">Ad-Free Experience</div><div class="col-span-3 text-center text-gray-400">✕</div><div class="col-span-3 text-center text-[#ff5722] font-bold">✓</div></div>
+          </div>
+        </div>
+
+        <!-- Launch Offer Plan Box -->
+        <div class="rounded-xl border-2 border-[#ff5722] bg-orange-50/60 p-2.5 flex items-center justify-between">
+          <div>
+            <div class="text-[11px] font-extrabold text-[#ff5722]">EARLY BIRD LAUNCH OFFER</div>
+            <div class="text-xs font-bold text-gray-900">All Pro Tools Unlocked Free</div>
+          </div>
+          <span class="bg-[#ff5722] text-white text-[11px] font-black px-2.5 py-1 rounded-lg">₹0 / Free</span>
+        </div>
+
+        <button type="button" id="ycProUnlockBtn" onclick="unlockProLaunchFree()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#ff5722] to-amber-500 text-white font-extrabold text-xs shadow-md">
+          Unlock Pro Free (Launch Offer)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="ycToast" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg"></div>
 
   <script>
@@ -488,16 +555,37 @@
         if (!raw) { el.innerHTML = ''; return; }
         const d = JSON.parse(raw);
         el.innerHTML = `
-          <div class="bg-white/90 rounded-xl p-2.5 shadow-sm flex items-center justify-between">
-            <div>
+          <div class="bg-white/90 rounded-xl p-2.5 shadow-sm flex items-center justify-between gap-2">
+            <div class="min-w-0 flex-1">
               <div class="text-[11px] font-bold text-gray-800">Last Draft (${d.savedAt})</div>
               <div class="text-[10px] text-gray-500">${d.overlays?.length || 0} texts/stickers · ${d.ratio}</div>
             </div>
             <button type="button" onclick="loadSavedDraft()" class="px-3 py-1 rounded-lg bg-[#ff5722] text-white text-[10px] font-bold">Resume</button>
+            <button type="button" onclick="deleteSavedDraft()" class="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center text-xs" title="Delete Draft"><i class="fa-solid fa-trash"></i></button>
           </div>`;
       } catch (e) { el.innerHTML = ''; }
     }
 
+    function deleteSavedDraft() {
+      try { localStorage.removeItem('yugacut_draft_v1'); } catch (e) {}
+      if (localStorage.getItem('yugacut_pro_unlocked') === '1') { const b = document.getElementById('ycHomeProBadge'); if (b) b.innerHTML = '<i class="fa-solid fa-crown text-[10px]"></i> <span>Pro Active</span>'; }
+    renderHomeDrafts();
+      showToast('Draft deleted!');
+    }
+    function openProModal() {
+      const btn = document.getElementById('ycProUnlockBtn');
+      const isPro = localStorage.getItem('yugacut_pro_unlocked') === '1';
+      if (btn) btn.textContent = isPro ? 'Pro Active ✓ (All Features Unlocked)' : 'Unlock Pro Free (Launch Offer)';
+      document.getElementById('ycProModal').classList.remove('hidden');
+    }
+    function closeProModal() { document.getElementById('ycProModal').classList.add('hidden'); }
+    function unlockProLaunchFree() {
+      try { localStorage.setItem('yugacut_pro_unlocked', '1'); } catch (e) {}
+      const badge = document.getElementById('ycHomeProBadge');
+      if (badge) badge.innerHTML = '<i class="fa-solid fa-crown text-[10px]"></i> <span>Pro Active</span>';
+      closeProModal();
+      showToast('All Pro Features Unlocked Free!');
+    }
     function loadSavedDraft() {
       try {
         const d = JSON.parse(localStorage.getItem('yugacut_draft_v1') || '{}');
@@ -529,7 +617,8 @@
     function goHome() {
       pausePlayback();
       autoSaveDraft();
-      renderHomeDrafts();
+      if (localStorage.getItem('yugacut_pro_unlocked') === '1') { const b = document.getElementById('ycHomeProBadge'); if (b) b.innerHTML = '<i class="fa-solid fa-crown text-[10px]"></i> <span>Pro Active</span>'; }
+    renderHomeDrafts();
       document.getElementById('ycHomeScreen').classList.remove('hidden');
     }
     function setAspectRatio(ratio) {
@@ -678,14 +767,17 @@
     function getMainVideoDuration() { return state.clips.reduce((acc, c) => acc + getClipEffectiveDur(c), 0); }
 
     function recomputeDuration() {
-      let total = getMainVideoDuration();
-      for (const a of state.audioClips) {
-        const aEnd = a.startAt + Math.max(0.2, (a.trimEnd - a.trimStart) / (a.speed || 1));
-        if (aEnd > total) total = aEnd;
-      }
-      for (const o of state.overlays) {
-        const oEnd = o.startAt + o.duration;
-        if (oEnd > total) total = oEnd;
+      const vidDur = getMainVideoDuration();
+      let total = vidDur;
+      if (state.clips.length === 0) {
+        for (const a of state.audioClips) {
+          const aEnd = a.startAt + Math.max(0.2, (a.trimEnd - a.trimStart) / (a.speed || 1));
+          if (aEnd > total) total = aEnd;
+        }
+        for (const o of state.overlays) {
+          const oEnd = o.startAt + o.duration;
+          if (oEnd > total) total = oEnd;
+        }
       }
       state.totalDuration = total;
       if (state.playhead > total) state.playhead = total;
@@ -2154,12 +2246,17 @@
         if (state.audioClips.length) {
           mixCtx = new (window.AudioContext || window.webkitAudioContext)();
           const dest = mixCtx.createMediaStreamDestination();
+          if (mixCtx.state === 'suspended') await mixCtx.resume();
+          const maxEnd = state.totalDuration > 0 ? state.totalDuration : 9999;
           for (const a of state.audioClips) {
+            if (a.startAt >= maxEnd) continue;
             const resp = await fetch(a.url), arr = await resp.arrayBuffer(), decoded = await mixCtx.decodeAudioData(arr);
             const src = mixCtx.createBufferSource(); src.buffer = decoded; src.playbackRate.value = a.speed || 1;
             const gain = mixCtx.createGain(); gain.gain.value = a.volume ?? 1;
             src.connect(gain); gain.connect(dest);
-            src.start(mixCtx.currentTime + a.startAt, a.trimStart, Math.max(0.1, a.trimEnd - a.trimStart));
+            const maxAudDur = Math.max(0.05, (maxEnd - a.startAt) * (a.speed || 1));
+            const playDur = Math.min(a.trimEnd - a.trimStart, maxAudDur);
+            if (playDur > 0.05) src.start(mixCtx.currentTime + a.startAt, a.trimStart, playDur);
           }
           tracks.push(...dest.stream.getAudioTracks());
         }
@@ -2201,6 +2298,7 @@
 
     function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m])); }
 
+    if (localStorage.getItem('yugacut_pro_unlocked') === '1') { const b = document.getElementById('ycHomeProBadge'); if (b) b.innerHTML = '<i class="fa-solid fa-crown text-[10px]"></i> <span>Pro Active</span>'; }
     renderHomeDrafts();
     renderToolbar();
     renderTimeline();
