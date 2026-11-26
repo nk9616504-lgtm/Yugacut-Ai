@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
   <title>YugaCut Studio — Pro Video Editor (No Watermark)</title>
   <meta name="theme-color" content="#ffffff" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2364261268133710" crossorigin="anonymous"></script>
   <link rel="manifest" href="manifest.json" />
   <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {})); }</script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -96,8 +97,8 @@
         <button type="button" onclick="document.getElementById('ycBackupImportInput').click()" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 shadow-sm text-xs" title="Import Backup">
           <i class="fa-solid fa-file-import"></i>
         </button>
-        <button type="button" onclick="openEditorDirectly()" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 shadow-sm text-xs" title="Open Editor">
-          <i class="fa-solid fa-sliders"></i>
+        <button type="button" onclick="openSettingsModal()" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 shadow-sm text-xs" title="Settings">
+          <i class="fa-solid fa-gear"></i>
         </button>
       </div>
     </div>
@@ -127,6 +128,19 @@
       <button type="button" onclick="triggerNewProject()" class="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center text-[#ff5722] text-xl" title="New Project"><i class="fa-solid fa-plus"></i></button>
       <button type="button" onclick="openEditorWithTool('music')" class="w-11 h-11 rounded-full bg-white shadow flex items-center justify-center text-gray-700 text-sm" title="Music"><i class="fa-solid fa-music"></i></button>
     </div>
+
+    <section class="max-w-xl mx-auto px-5 pb-8 pt-2 text-left text-xs text-gray-700 space-y-3">
+      <div class="bg-white/85 rounded-2xl p-4 shadow-sm space-y-2 leading-relaxed">
+        <h2 class="text-sm font-extrabold text-gray-900">About YugaCut Studio — Free No-Watermark Video Editor</h2>
+        <p><strong>YugaCut Studio</strong> (yugacut.fixrservice.in) is a fast, browser-based multi-track video editor built for YouTube Shorts, Instagram Reels, and WhatsApp Status creators. Edit videos and photo slideshows directly on your phone or PC with zero watermarks and privacy-first local processing.</p>
+        <p><strong>Key Editing Capabilities:</strong> Zero-gap clip joining, 16:9 to 9:16 Zoom &amp; Fill, Pro 5-Tab Text Editor with Tamil &amp; English fonts, Press-and-Hold Live Effects, Chroma Key green-screen removal, Featured Royalty-Free Background Music with live waveform trimming, AI Speech-to-Text captions, 1-Tap Auto Reel Maker, and 480p/720p/1080p audio-mixed export.</p>
+        <div class="pt-2 border-t border-gray-200 flex flex-wrap gap-3 text-[11px] font-bold text-[#ff5722]">
+          <button type="button" onclick="openSettingsSub('qa')">Q&amp;A Guide</button>
+          <button type="button" onclick="openSettingsSub('legal')">Privacy Policy &amp; AdSense</button>
+          <button type="button" onclick="openSettingsSub('legal')">Terms &amp; Contact</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <!-- ==================== 2. MAIN EDITOR SCREEN ==================== -->
@@ -410,6 +424,42 @@
     </div>
   </div>
 
+  <!-- ==================== 6. SETTINGS MODAL (YouCut-Style) ==================== -->
+  <div id="ycSettingsModal" class="hidden fixed inset-0 z-50 bg-white flex flex-col">
+    <div class="bg-[#ff5722] text-white px-4 py-3 flex items-center gap-3 shadow-sm">
+      <button type="button" onclick="closeSettingsModal()" class="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center"><i class="fa-solid fa-arrow-left"></i></button>
+      <span class="text-base font-bold">Settings</span>
+    </div>
+    <div class="flex-1 overflow-y-auto divide-y divide-gray-100 text-sm">
+      <div class="p-4 space-y-3">
+        <div class="text-xs font-extrabold text-[#ff5722] uppercase">General</div>
+        <button type="button" onclick="toggleAppTheme()" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-regular fa-sun w-5 text-gray-600"></i><div class="flex-1"><div class="font-semibold text-gray-800">Appearance</div><div id="ycThemeLabel" class="text-xs text-gray-500">Light Theme</div></div></button>
+        <button type="button" onclick="cycleAppLanguage()" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-globe w-5 text-gray-600"></i><div class="flex-1"><div class="font-semibold text-gray-800">Language</div><div id="ycLangLabel" class="text-xs text-gray-500">English</div></div></button>
+        <button type="button" onclick="unlockProLaunchFree();closeSettingsModal();" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-rotate w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Restore Purchases (Pro Free)</span></button>
+        <button type="button" onclick="closeSettingsModal();openEditorDirectly();" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-film w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Video Setting (Ratio &amp; FPS)</span></button>
+        <button type="button" onclick="openSettingsSub('qa')" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-regular fa-circle-question w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Q&amp;A</span></button>
+        <a href="mailto:veeraadspromotions@gmail.com?subject=YugaCut%20Studio%20Feedback" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-regular fa-comment-dots w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Feedback</span></a>
+        <button type="button" onclick="shareYugaCutApp()" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-share-nodes w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Share with friends</span></button>
+        <button type="button" onclick="clearAppCacheNow()" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-broom w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Clear Cache</span></button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div class="text-xs font-extrabold text-[#ff5722] uppercase">Others</div>
+        <button type="button" onclick="openSettingsSub('legal')" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-book-open w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Legal (Privacy Policy &amp; Terms)</span></button>
+        <div class="flex items-center gap-3 py-1.5 text-gray-600"><i class="fa-solid fa-circle-info w-5"></i><span class="font-semibold">YugaCut Studio v2.0.0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ycSettingsSubModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-3">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[85dvh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h3 id="ycSubModalTitle" class="text-sm font-bold text-gray-900">Info</h3>
+        <button type="button" onclick="document.getElementById('ycSettingsSubModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="ycSubModalBody" class="p-4 overflow-y-auto text-xs text-gray-700 space-y-2.5 leading-relaxed"></div>
+    </div>
+  </div>
+
   <div id="ycToast" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg"></div>
 
   <script>
@@ -619,6 +669,42 @@
       if (localStorage.getItem('yugacut_pro_unlocked') === '1') { const b = document.getElementById('ycHomeProBadge'); if (b) b.innerHTML = '<i class="fa-solid fa-crown text-[10px]"></i> <span>Pro Active</span>'; }
     renderHomeDrafts();
       showToast('Draft deleted!');
+    }
+    function openSettingsModal() { document.getElementById('ycSettingsModal').classList.remove('hidden'); }
+    function closeSettingsModal() { document.getElementById('ycSettingsModal').classList.add('hidden'); }
+    function toggleAppTheme() {
+      const home = document.getElementById('ycHomeScreen');
+      const isDark = home.classList.toggle('bg-slate-900');
+      home.classList.toggle('bg-[#dce4e8]', !isDark);
+      document.getElementById('ycThemeLabel').textContent = isDark ? 'Dark Slate' : 'Light Theme';
+    }
+    function cycleAppLanguage() {
+      const lbl = document.getElementById('ycLangLabel');
+      const langs = ['English', 'தமிழ் (Tamil)', 'हिन्दी (Hindi)'];
+      const next = langs[(langs.indexOf(lbl.textContent) + 1) % langs.length];
+      lbl.textContent = next;
+      showToast('Language: ' + next);
+    }
+    async function shareYugaCutApp() {
+      const url = 'https://yugacut.fixrservice.in/';
+      if (navigator.share) { try { await navigator.share({ title: 'YugaCut Studio', text: 'Free No-Watermark Video Editor!', url }); return; } catch (e) {} }
+      navigator.clipboard?.writeText(url); showToast('Link copied: ' + url);
+    }
+    function clearAppCacheNow() {
+      try { localStorage.removeItem('yugacut_draft_v1'); } catch (e) {}
+      renderHomeDrafts(); showToast('Cache & Draft cleared!');
+    }
+    function openSettingsSub(which) {
+      const title = document.getElementById('ycSubModalTitle');
+      const body = document.getElementById('ycSubModalBody');
+      if (which === 'qa') {
+        title.textContent = 'Q&A — How to Use YugaCut Studio';
+        body.innerHTML = `<p><strong>1. Does YugaCut Studio add a watermark?</strong><br/>No! All exports are 100% watermark-free.</p><p><strong>2. How do I fill 9:16 Reels from a 16:9 video?</strong><br/>Tap <em>Zoom/Fill</em> in the toolbar and tap <em>Fill 9:16</em>.</p><p><strong>3. How do Press-and-Hold Effects work?</strong><br/>Open <em>Effects</em>, press &amp; hold any effect button while the video plays, and release when done.</p><p><strong>4. Are my videos uploaded to a server?</strong><br/>No, all editing runs locally in your browser.</p>`;
+      } else {
+        title.textContent = 'Legal — Privacy Policy, AdSense & Terms';
+        body.innerHTML = `<p><strong>Privacy Policy:</strong> YugaCut Studio (yugacut.fixrservice.in) processes your videos, photos, and audio locally on your device.</p><p><strong>Google AdSense &amp; Cookies:</strong> Third-party vendors, including Google, use cookies to serve ads. Users may opt out at <em>https://adssettings.google.com</em>.</p><p><strong>Terms &amp; Contact:</strong> Contact <strong>veeraadspromotions@gmail.com</strong>.</p>`;
+      }
+      document.getElementById('ycSettingsSubModal').classList.remove('hidden');
     }
     function openProModal() {
       const btn = document.getElementById('ycProUnlockBtn');
