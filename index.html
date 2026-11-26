@@ -22,6 +22,18 @@
     }
     .yc-scroll::-webkit-scrollbar { display: none; }
     .yc-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    @media (pointer: fine) {
+      #ycTimelineViewport { cursor: grab; scrollbar-width: thin; scrollbar-color: #cbd5e1 #f3f4f6; }
+      #ycTimelineViewport:active { cursor: grabbing; }
+      #ycTimelineViewport::-webkit-scrollbar { display: block; height: 8px; }
+      #ycTimelineViewport::-webkit-scrollbar-track { background: #f3f4f6; border-radius: 999px; }
+      #ycTimelineViewport::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+      #ycTimelineViewport::-webkit-scrollbar-thumb:hover { background: #ff5722; }
+      #ycToolbarRow::-webkit-scrollbar { display: block; height: 4px; }
+      #ycToolbarRow::-webkit-scrollbar-track { background: transparent; }
+      #ycToolbarRow::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
+      #ycToolbarRow::-webkit-scrollbar-thumb:hover { background: #ff5722; }
+    }
     .yc-tool-btn {
       display: flex;
       flex-direction: column;
@@ -948,7 +960,7 @@
       if (info && info.clip.type === 'video') {
         const v = info.clip.mediaEl;
         const target = info.clip.trimStart + info.localOffset * info.clip.speed;
-        if (Math.abs(v.currentTime - target) > 0.08) { v.currentTime = target; v.onseeked = () => drawFrame(); }
+        if (Math.abs(v.currentTime - target) > 0.04) { v.currentTime = target; v.onseeked = () => drawFrame(); }
       }
       drawFrame();
     }
@@ -2642,6 +2654,94 @@
     function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m])); }
 
     if (localStorage.getItem('yugacut_pro_unlocked') === '1') { const b = document.getElementById('ycHomeProBadge'); if (b) b.innerHTML = '<i class="fa-solid fa-crown text-[10px]"></i> <span>Pro Active</span>'; }
+    function setupDesktopTimelineControls() {
+      const vp = document.getElementById('ycTimelineViewport');
+      const ruler = document.getElementById('ycRulerTrack');
+      const toolbar = document.getElementById('ycToolbarRow');
+      if (!vp) return;
+
+      let dragActive = false, dragMoved = false, startX = 0, startScroll = 0, suppressClick = false;
+
+      vp.addEventListener('click', (e) => {
+        if (suppressClick) { e.stopPropagation(); e.preventDefault(); suppressClick = false; }
+      }, true);
+
+      vp.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        if (e.target.closest('[onpointerdown*="startTimelineDrag"], [onpointerdown*="startOverlayResize"], button, input, select')) return;
+        dragActive = true;
+        dragMoved = false;
+        startX = e.clientX;
+        startScroll = vp.scrollLeft;
+        vp.style.cursor = 'grabbing';
+        document.body.classList.add('select-none');
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!dragActive) return;
+        const dx = e.clientX - startX;
+        if (!dragMoved && Math.abs(dx) > 3) {
+          dragMoved = true;
+          if (state.isPlaying) togglePlay();
+        }
+        if (dragMoved) {
+          vp.scrollLeft = startScroll - dx;
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (!dragActive) return;
+        dragActive = false;
+        vp.style.cursor = '';
+        document.body.classList.remove('select-none');
+        if (dragMoved) {
+          suppressClick = true;
+          setTimeout(() => { suppressClick = false; }, 60);
+        }
+      });
+
+      vp.addEventListener('wheel', (e) => {
+        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        if (delta !== 0) {
+          e.preventDefault();
+          if (state.isPlaying) togglePlay();
+          vp.scrollLeft += delta;
+        }
+      }, { passive: false });
+
+      if (ruler) {
+        ruler.style.cursor = 'pointer';
+        ruler.addEventListener('click', (e) => {
+          if (dragMoved || e.target.closest('[title="Jump to Flag"]')) return;
+          const rect = ruler.getBoundingClientRect();
+          const sec = Math.max(0, Math.min(state.totalDuration, (e.clientX - rect.left) / state.pxPerSec));
+          seekTo(sec, true);
+        });
+      }
+
+      if (toolbar) {
+        toolbar.addEventListener('wheel', (e) => {
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            e.preventDefault();
+            toolbar.scrollLeft += e.deltaY;
+          }
+        }, { passive: false });
+      }
+
+      window.addEventListener('keydown', (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) return;
+        const editorEl = document.getElementById('ycEditorView');
+        if (!editorEl || editorEl.classList.contains('hidden')) return;
+        if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+        else if (e.code === 'ArrowLeft') { e.preventDefault(); seekTo(state.playhead - (e.shiftKey ? 1 : 0.1), true); }
+        else if (e.code === 'ArrowRight') { e.preventDefault(); seekTo(state.playhead + (e.shiftKey ? 1 : 0.1), true); }
+        else if (e.code === 'Home') { e.preventDefault(); seekTo(0, true); }
+        else if (e.code === 'End') { e.preventDefault(); seekTo(state.totalDuration, true); }
+      });
+    }
+
+    setupDesktopTimelineControls();
     renderHomeDrafts();
     renderToolbar();
     renderTimeline();
