@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
   <title>YugaCut Studio — Pro Video Editor (No Watermark)</title>
   <meta name="theme-color" content="#ffffff" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2364261268133710" crossorigin="anonymous"></script>
   <link rel="manifest" href="manifest.json" />
   <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {})); }</script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -96,8 +97,8 @@
         <button type="button" onclick="document.getElementById('ycBackupImportInput').click()" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 shadow-sm text-xs" title="Import Backup">
           <i class="fa-solid fa-file-import"></i>
         </button>
-        <button type="button" onclick="openEditorDirectly()" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 shadow-sm text-xs" title="Open Editor">
-          <i class="fa-solid fa-sliders"></i>
+        <button type="button" onclick="openSettingsModal()" class="w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 shadow-sm text-xs" title="Settings">
+          <i class="fa-solid fa-gear"></i>
         </button>
       </div>
     </div>
@@ -127,6 +128,19 @@
       <button type="button" onclick="triggerNewProject()" class="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center text-[#ff5722] text-xl" title="New Project"><i class="fa-solid fa-plus"></i></button>
       <button type="button" onclick="openEditorWithTool('music')" class="w-11 h-11 rounded-full bg-white shadow flex items-center justify-center text-gray-700 text-sm" title="Music"><i class="fa-solid fa-music"></i></button>
     </div>
+
+    <section class="max-w-xl mx-auto px-5 pb-8 pt-2 text-left text-xs text-gray-700 space-y-3">
+      <div class="bg-white/85 rounded-2xl p-4 shadow-sm space-y-2 leading-relaxed">
+        <h2 class="text-sm font-extrabold text-gray-900">About YugaCut Studio — Free No-Watermark Video Editor</h2>
+        <p><strong>YugaCut Studio</strong> (yugacut.fixrservice.in) is a fast, browser-based multi-track video editor built for YouTube Shorts, Instagram Reels, and WhatsApp Status creators. Edit videos and photo slideshows directly on your phone or PC with zero watermarks and privacy-first local processing.</p>
+        <p><strong>Key Editing Capabilities:</strong> Zero-gap clip joining, 16:9 to 9:16 Zoom &amp; Fill, Pro 5-Tab Text Editor with Tamil &amp; English fonts, Press-and-Hold Live Effects, Chroma Key green-screen removal, Featured Royalty-Free Background Music with live waveform trimming, AI Speech-to-Text captions, 1-Tap Auto Reel Maker, and 480p/720p/1080p audio-mixed export.</p>
+        <div class="pt-2 border-t border-gray-200 flex flex-wrap gap-3 text-[11px] font-bold text-[#ff5722]">
+          <button type="button" onclick="openSettingsSub('qa')">Q&amp;A Guide</button>
+          <button type="button" onclick="openSettingsSub('legal')">Privacy Policy &amp; AdSense</button>
+          <button type="button" onclick="openSettingsSub('legal')">Terms &amp; Contact</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <!-- ==================== 2. MAIN EDITOR SCREEN ==================== -->
@@ -186,6 +200,10 @@
         </button>
       </div>
       <div class="flex items-center gap-1 text-gray-500">
+        <div id="ycVuMeter" class="hidden sm:flex items-center gap-0.5 h-3 px-1.5 bg-gray-100 rounded" title="Audio dB Meter">
+          <span class="w-1 h-2 bg-emerald-500 rounded-sm"></span><span class="w-1 h-2.5 bg-amber-400 rounded-sm"></span><span class="w-1 h-1.5 bg-red-500 rounded-sm"></span>
+        </div>
+        <button type="button" onclick="addFlagMarker()" class="px-1.5 py-1 text-[11px] text-[#ff5722] hover:bg-orange-50 rounded" title="Add Flag Marker"><i class="fa-solid fa-flag"></i></button>
         <button type="button" onclick="zoomTimeline(-8)" class="px-1.5 py-1 text-[11px] hover:text-gray-800" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
         <button type="button" onclick="zoomTimeline(8)" class="px-1.5 py-1 text-[11px] hover:text-gray-800" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
         <button type="button" onclick="toggleFullscreenPreview()" class="p-1.5 hover:text-gray-800" title="Fullscreen"><i class="fa-solid fa-expand text-xs"></i></button>
@@ -206,7 +224,7 @@
       <button id="ycCollapseBtn" type="button" onclick="deselectAll()" class="hidden px-2.5 py-2 border-r border-gray-100 text-gray-500 hover:text-gray-800" title="Back to main tools">
         <i class="fa-solid fa-chevron-down text-xs"></i>
       </button>
-      <div id="ycToolbarRow" class="flex-1 flex items-center overflow-x-auto yc-scroll px-1"></div>
+      <div id="ycToolbarRow" class="flex-1 min-w-0 flex items-center overflow-x-auto yc-scroll px-1"></div>
     </div>
 
     <!-- BOTTOM MULTI-TRACK TIMELINE -->
@@ -222,7 +240,7 @@
           </button>
         </div>
 
-        <div class="flex-1 relative bg-white overflow-hidden">
+        <div class="flex-1 min-w-0 relative bg-white overflow-hidden">
           <div id="ycPlayhead" class="pointer-events-none absolute top-0 bottom-0 w-[2px] bg-[#ff5722] z-20" style="left: 40px;">
             <div class="w-2 h-2 bg-[#ff5722] rounded-full -ml-[3px] shadow"></div>
           </div>
@@ -230,6 +248,7 @@
           <div id="ycTimelineViewport" class="w-full overflow-x-auto yc-scroll pt-3 pb-1" onscroll="handleTimelineScroll()">
             <div id="ycTracksWrap" class="relative flex flex-col justify-end min-h-[118px] space-y-1" style="padding-left: 40px; padding-right: 400px; width: max-content;">
               <div id="ycRulerTrack" class="h-3 relative text-[8.5px] font-semibold text-gray-400 select-none mb-auto"></div>
+              <div id="ycFxLanes" class="space-y-1"></div>
               <div id="ycOverlayLanes" class="space-y-1"></div>
               <div id="ycAudioLanes" class="space-y-1"></div>
               <div id="ycVideoTrack" class="h-12 flex items-center gap-0"></div>
@@ -405,6 +424,42 @@
     </div>
   </div>
 
+  <!-- ==================== 6. SETTINGS MODAL (YouCut-Style) ==================== -->
+  <div id="ycSettingsModal" class="hidden fixed inset-0 z-50 bg-white flex flex-col">
+    <div class="bg-[#ff5722] text-white px-4 py-3 flex items-center gap-3 shadow-sm">
+      <button type="button" onclick="closeSettingsModal()" class="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center"><i class="fa-solid fa-arrow-left"></i></button>
+      <span class="text-base font-bold">Settings</span>
+    </div>
+    <div class="flex-1 overflow-y-auto divide-y divide-gray-100 text-sm">
+      <div class="p-4 space-y-3">
+        <div class="text-xs font-extrabold text-[#ff5722] uppercase">General</div>
+        <button type="button" onclick="toggleAppTheme()" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-regular fa-sun w-5 text-gray-600"></i><div class="flex-1"><div class="font-semibold text-gray-800">Appearance</div><div id="ycThemeLabel" class="text-xs text-gray-500">Light Theme</div></div></button>
+        <button type="button" onclick="cycleAppLanguage()" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-globe w-5 text-gray-600"></i><div class="flex-1"><div class="font-semibold text-gray-800">Language</div><div id="ycLangLabel" class="text-xs text-gray-500">English</div></div></button>
+        <button type="button" onclick="unlockProLaunchFree();closeSettingsModal();" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-rotate w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Restore Purchases (Pro Free)</span></button>
+        <button type="button" onclick="closeSettingsModal();openEditorDirectly();" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-film w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Video Setting (Ratio &amp; FPS)</span></button>
+        <button type="button" onclick="openSettingsSub('qa')" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-regular fa-circle-question w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Q&amp;A</span></button>
+        <a href="mailto:veeraadspromotions@gmail.com?subject=YugaCut%20Studio%20Feedback" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-regular fa-comment-dots w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Feedback</span></a>
+        <button type="button" onclick="shareYugaCutApp()" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-share-nodes w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Share with friends</span></button>
+        <button type="button" onclick="clearAppCacheNow()" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-broom w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Clear Cache</span></button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div class="text-xs font-extrabold text-[#ff5722] uppercase">Others</div>
+        <button type="button" onclick="openSettingsSub('legal')" class="w-full flex items-center gap-3 py-1.5 text-left"><i class="fa-solid fa-book-open w-5 text-gray-600"></i><span class="font-semibold text-gray-800">Legal (Privacy Policy &amp; Terms)</span></button>
+        <div class="flex items-center gap-3 py-1.5 text-gray-600"><i class="fa-solid fa-circle-info w-5"></i><span class="font-semibold">YugaCut Studio v2.0.0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ycSettingsSubModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-3">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[85dvh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h3 id="ycSubModalTitle" class="text-sm font-bold text-gray-900">Info</h3>
+        <button type="button" onclick="document.getElementById('ycSettingsSubModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="ycSubModalBody" class="p-4 overflow-y-auto text-xs text-gray-700 space-y-2.5 leading-relaxed"></div>
+    </div>
+  </div>
+
   <div id="ycToast" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-lg"></div>
 
   <script>
@@ -414,6 +469,12 @@
       audioClips: [], // { id, name, url, audioEl, startAt, trimStart, trimEnd, volume, fadeIn, fadeOut, eq, speed, peaks:[], beats:[] }
       overlays: [], // { id, kind:'text'|'sticker'|'badge'|'png'|'pip'|'blur'|'qr'|'social', text, subText, imgEl, vidEl, chroma, chromaThresh, x, y, endX, endY, keyframe, size, color, labelBg, borderCol, shadowCol, font, bold, italic, underline, upper, align, opacity, letterSpacing, animIn, animOut, animLoop, startAt, duration }
       beatMarkers: [],
+      fxBlocks: [], // { id, fxId, name, col, startAt, duration }
+      holdingFx: null,
+      selectedFxBlockId: null,
+      spectrumBars: false,
+      autoDucking: true,
+      flagMarkers: [],
       bgMode: 'black',
       splitLayout: 'single', // 'single' | 'side2' | 'top2'
       progressBar: false,
@@ -444,6 +505,7 @@
       textTab: 'edit',
       textColorSub: 'text',
       textAnimSub: 'in',
+      fxCat: 'glitch',
       speechRec: null,
       isListeningCaptions: false
     };
@@ -454,15 +516,51 @@
       { id: 'warm', name: 'Warm', css: 'sepia(0.25) saturate(1.2) brightness(1.03)' },
       { id: 'cool', name: 'Cool', css: 'hue-rotate(185deg) saturate(0.95)' },
       { id: 'bw', name: 'B&W', css: 'grayscale(1) contrast(1.1)' },
-      { id: 'vintage', name: 'Vintage', css: 'sepia(0.45) contrast(0.95)' }
+      { id: 'vintage', name: 'Vintage', css: 'sepia(0.45) contrast(0.95)' },
+      { id: 'tealOrange', name: 'Teal & Orange', css: 'contrast(1.18) saturate(1.35) hue-rotate(-12deg)' },
+      { id: 'matte', name: 'Matte Film', css: 'contrast(0.88) brightness(1.06) saturate(0.9)' },
+      { id: 'moody', name: 'Moody Dark', css: 'contrast(1.25) brightness(0.86) saturate(0.8)' },
+      { id: 'splash', name: 'Color Splash', css: 'grayscale(0.82) contrast(1.25) saturate(1.4)' }
     ];
-    const FX_PRESETS = [
-      { id: 'none', name: 'None' },
-      { id: 'beatZoom', name: 'Beat Pulse' },
-      { id: 'zoom', name: 'Slow Zoom' },
-      { id: 'vignette', name: 'Vignette' },
-      { id: 'flash', name: 'Flash' },
-      { id: 'shake', name: 'Shake' }
+    const FX_CATEGORIES = {
+      glitch: [
+        { id: 'cyberRgb', name: 'Cyber RGB', col: '#8b5cf6' },
+        { id: 'lightning', name: 'Lightning', col: '#eab308' },
+        { id: 'glitchRgb', name: 'Glitch', col: '#ef4444' },
+        { id: 'vhsGlitch', name: 'VHS Glitch', col: '#f97316' },
+        { id: 'glitchLine', name: 'Glitch Line', col: '#ec4899' },
+        { id: 'badTv', name: 'Bad TV', col: '#6366f1' }
+      ],
+      beat: [
+        { id: 'heartbeat', name: 'Heartbeat', col: '#e11d48' },
+        { id: 'beatZoom', name: 'Beat Pulse', col: '#ff5722' },
+        { id: 'vortex', name: 'Vortex Spin', col: '#7c3aed' },
+        { id: 'shake', name: 'Shake', col: '#f59e0b' },
+        { id: 'flash', name: 'Flash', col: '#3b82f6' },
+        { id: 'zoom', name: 'Slow Zoom', col: '#10b981' },
+        { id: 'trail', name: 'Motion Trail', col: '#06b6d4' }
+      ],
+      mirror: [
+        { id: 'mirrorH', name: 'Mirror H', col: '#0ea5e9' },
+        { id: 'mirrorV', name: 'Mirror V', col: '#8b5cf6' },
+        { id: 'mirror4', name: '4-Way', col: '#ec4899' },
+        { id: 'prism', name: 'Neon Prism', col: '#14b8a6' }
+      ],
+      retro: [
+        { id: 'filmBurn', name: 'Film Burn', col: '#ea580c' },
+        { id: 'vignette', name: 'Vignette', col: '#374151' },
+        { id: 'vhs', name: 'Film VHS', col: '#b45309' },
+        { id: 'shadowRgb', name: 'Neon RGB', col: '#06b6d4' }
+      ]
+    };
+    const STYLE_TEMPLATES = [
+      { id: 'normal', name: 'Current', filter: 'none', fx: 'none', bg: 'black', part: 'none', bar: false, col: '#6b7280' },
+      { id: 'viralReels', name: 'Viral Reels', filter: 'vivid', fx: 'heartbeat', bg: 'blur', part: 'sparkle', bar: true, col: '#ff5722' },
+      { id: 'actionEdit', name: 'Action Edit', filter: 'vivid', fx: 'cyberRgb', bg: 'black', part: 'none', bar: true, col: '#7c3aed' },
+      { id: 'goldenVlog', name: 'Golden Vlog', filter: 'warm', fx: 'filmBurn', bg: 'blur', part: 'none', bar: false, col: '#ea580c' },
+      { id: 'retro90', name: 'Retro 90s', filter: 'vintage', fx: 'vhs', bg: 'cinema', part: 'none', bar: false, col: '#b45309' },
+      { id: 'winter', name: 'Aesthetic Chill', filter: 'cool', fx: 'vignette', bg: 'cinema', part: 'snow', bar: false, col: '#0284c7' },
+      { id: 'love', name: 'Romantic Glow', filter: 'warm', fx: 'prism', bg: 'blur', part: 'hearts', bar: false, col: '#ec4899' }
     ];
     const TRANSITIONS = [
       { id: 'none', name: 'None' },
@@ -571,6 +669,42 @@
       if (localStorage.getItem('yugacut_pro_unlocked') === '1') { const b = document.getElementById('ycHomeProBadge'); if (b) b.innerHTML = '<i class="fa-solid fa-crown text-[10px]"></i> <span>Pro Active</span>'; }
     renderHomeDrafts();
       showToast('Draft deleted!');
+    }
+    function openSettingsModal() { document.getElementById('ycSettingsModal').classList.remove('hidden'); }
+    function closeSettingsModal() { document.getElementById('ycSettingsModal').classList.add('hidden'); }
+    function toggleAppTheme() {
+      const home = document.getElementById('ycHomeScreen');
+      const isDark = home.classList.toggle('bg-slate-900');
+      home.classList.toggle('bg-[#dce4e8]', !isDark);
+      document.getElementById('ycThemeLabel').textContent = isDark ? 'Dark Slate' : 'Light Theme';
+    }
+    function cycleAppLanguage() {
+      const lbl = document.getElementById('ycLangLabel');
+      const langs = ['English', 'தமிழ் (Tamil)', 'हिन्दी (Hindi)'];
+      const next = langs[(langs.indexOf(lbl.textContent) + 1) % langs.length];
+      lbl.textContent = next;
+      showToast('Language: ' + next);
+    }
+    async function shareYugaCutApp() {
+      const url = 'https://yugacut.fixrservice.in/';
+      if (navigator.share) { try { await navigator.share({ title: 'YugaCut Studio', text: 'Free No-Watermark Video Editor!', url }); return; } catch (e) {} }
+      navigator.clipboard?.writeText(url); showToast('Link copied: ' + url);
+    }
+    function clearAppCacheNow() {
+      try { localStorage.removeItem('yugacut_draft_v1'); } catch (e) {}
+      renderHomeDrafts(); showToast('Cache & Draft cleared!');
+    }
+    function openSettingsSub(which) {
+      const title = document.getElementById('ycSubModalTitle');
+      const body = document.getElementById('ycSubModalBody');
+      if (which === 'qa') {
+        title.textContent = 'Q&A — How to Use YugaCut Studio';
+        body.innerHTML = `<p><strong>1. Does YugaCut Studio add a watermark?</strong><br/>No! All exports are 100% watermark-free.</p><p><strong>2. How do I fill 9:16 Reels from a 16:9 video?</strong><br/>Tap <em>Zoom/Fill</em> in the toolbar and tap <em>Fill 9:16</em>.</p><p><strong>3. How do Press-and-Hold Effects work?</strong><br/>Open <em>Effects</em>, press &amp; hold any effect button while the video plays, and release when done.</p><p><strong>4. Are my videos uploaded to a server?</strong><br/>No, all editing runs locally in your browser.</p>`;
+      } else {
+        title.textContent = 'Legal — Privacy Policy, AdSense & Terms';
+        body.innerHTML = `<p><strong>Privacy Policy:</strong> YugaCut Studio (yugacut.fixrservice.in) processes your videos, photos, and audio locally on your device.</p><p><strong>Google AdSense &amp; Cookies:</strong> Third-party vendors, including Google, use cookies to serve ads. Users may opt out at <em>https://adssettings.google.com</em>.</p><p><strong>Terms &amp; Contact:</strong> Contact <strong>veeraadspromotions@gmail.com</strong>.</p>`;
+      }
+      document.getElementById('ycSettingsSubModal').classList.remove('hidden');
     }
     function openProModal() {
       const btn = document.getElementById('ycProUnlockBtn');
@@ -851,11 +985,25 @@
       for (let t = 0; t <= Math.ceil(state.totalDuration) + stepSec; t += stepSec) {
         rulerHtml += `<span style="position:absolute; left:${t * state.pxPerSec}px;">${fmtTime(t).slice(0, -2)}</span>`;
       }
+      state.flagMarkers.forEach(ft => { rulerHtml += `<span onclick="seekTo(${ft},true)" title="Jump to Flag" style="position:absolute;left:${ft*state.pxPerSec}px;color:#dc2626;cursor:pointer;">🚩</span>`; });
       state.beatMarkers.forEach(bt => {
         rulerHtml += `<span title="Beat" style="position:absolute; left:${bt * state.pxPerSec}px; color:#ff5722;">◆</span>`;
       });
       rulerEl.style.width = totalPx + 'px';
       rulerEl.innerHTML = rulerHtml;
+
+      // Timed FX Blocks Lane
+      const fxLaneEl = document.getElementById('ycFxLanes');
+      if (fxLaneEl) {
+        if (!state.fxBlocks.length) fxLaneEl.innerHTML = '';
+        else {
+          fxLaneEl.innerHTML = `<div class="relative h-3" style="width:${totalPx}px">` + state.fxBlocks.map(fb => {
+            const left = Math.round(fb.startAt * state.pxPerSec);
+            const w = Math.max(24, Math.round(fb.duration * state.pxPerSec));
+            return `<div onclick="deleteFxBlock('${fb.id}',event)" title="Tap to remove ${fb.name}" style="position:absolute;left:${left}px;width:${w}px;background:${fb.col}" class="h-3 rounded-full text-white text-[7.5px] font-bold px-1.5 flex items-center truncate cursor-pointer">✦ ${fb.name}</div>`;
+          }).join('') + `</div>`;
+        }
+      }
 
       // Multi-Track Overlays
       if (!state.overlays.length) {
@@ -1023,6 +1171,7 @@
           ['audioTrim', 'fa-scissors', 'Trim'],
           ['audioVol', 'fa-volume-high', 'Volume'],
           ['audioFade', 'fa-chart-area', 'Fade'],
+          ['audioDuck', 'fa-volume-low', 'Ducking'],
           ['audioEq', 'fa-sliders', 'EQ'],
           ['audioBeat', 'fa-wave-square', 'Beats'],
           ['audioSpeed', 'fa-gauge-high', 'Speed'],
@@ -1067,6 +1216,7 @@
         ['pip', 'fa-clone', 'PIP/Chroma'],
         ['filter', 'fa-circle-half-stroke', 'Filter'],
         ['fx', 'fa-bolt', 'Effects'],
+        ['templates', 'fa-layer-group', 'Template'],
         ['layout', 'fa-table-columns', 'Collage'],
         ['frame', 'fa-square', 'BG/Frame'],
         ['tools', 'fa-toolbox', 'Backup']
@@ -1095,6 +1245,7 @@
       if (toolId === 'audioSplit') { splitSelectedAudioAtPlayhead(); return; }
       if (toolId === 'audioBeat') { detectBeatsForSelectedAudio(); return; }
       if (toolId === 'audioToZero') { moveSelectedAudioToZero(); return; }
+      if (toolId === 'audioDuck') { state.autoDucking = !state.autoDucking; showToast(state.autoDucking ? 'Auto-Ducking ON' : 'Auto-Ducking OFF'); return; }
       openTool(toolId);
     }
 
@@ -1147,7 +1298,7 @@
           <div class="grid grid-cols-3 gap-2 text-[10px]">
             <div><span>Zoom (${(clip.cropScale||1).toFixed(1)}x)</span><input type="range" min="1" max="3.5" step="0.05" value="${clip.cropScale||1}" oninput="updateCropProp('cropScale',this.value)" class="w-full yc-range" /></div>
             <div><span>Pan X</span><input type="range" min="-250" max="250" step="5" value="${clip.panX||0}" oninput="updateCropProp('panX',this.value)" class="w-full yc-range" /></div>
-            <div><span>Pan Y</span><input type="range" min="-250" max="250" step="5" value="${clip.panY||0}" oninput="updateCropProp('panY',this.value)" class="w-full yc-range" /></div>
+            <div><span>Pan Y</span><input type="range" min="-250" max="250" step="5" value="${clip.panY||0}" oninput="updateCropProp('panY',this.value)" class="w-full yc-range" /></div></div><div class="flex items-center gap-2 pt-1 text-[10px]"><span>3D Tilt</span><input type="range" min="-25" max="25" step="1" value="${clip.tilt||0}" oninput="updateCropProp('tilt',this.value)" class="flex-1 yc-range" />
           </div>`;
       } else if (toolId === 'captions') {
         title.textContent = 'AI Speech-to-Text Auto Captions';
@@ -1240,6 +1391,7 @@
             <button type="button" onclick="addBlurBox()" class="px-2.5 py-1.5 rounded-lg bg-gray-800 text-white text-[10.5px] font-bold flex-shrink-0">Blur Box</button>
             <button type="button" onclick="promptQrSticker()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-[10.5px] font-bold flex-shrink-0">QR Code</button>
             <button type="button" onclick="promptSocialCard()" class="px-2.5 py-1.5 rounded-lg bg-pink-600 text-white text-[10.5px] font-bold flex-shrink-0">Social Card</button>
+            <button type="button" onclick="addCountdownOverlay()" class="px-2.5 py-1.5 rounded-lg bg-amber-600 text-white text-[10.5px] font-bold flex-shrink-0">3-2-1 Timer</button>
             ${BADGE_STICKERS.map(b => `<button type="button" onclick="addBadgeSticker('${b.id}')" style="background:${b.bg};color:${b.fg}" class="px-2.5 py-1 rounded-full text-[10px] font-extrabold flex-shrink-0">${b.label}</button>`).join('')}
             ${STICKERS.map(s => `<button type="button" onclick="addSticker('${s}')" class="w-8 h-8 rounded-lg bg-white border border-gray-200 text-base flex items-center justify-center flex-shrink-0">${s}</button>`).join('')}
           </div>
@@ -1282,13 +1434,43 @@
         if (!clip) return;
         body.innerHTML = `<div class="grid grid-cols-3 gap-2 text-[10px]"><div><span>Brightness</span><input type="range" min="60" max="150" value="${clip.adj.b}" oninput="updateAdj('b',this.value)" class="w-full yc-range" /></div><div><span>Contrast</span><input type="range" min="60" max="150" value="${clip.adj.c}" oninput="updateAdj('c',this.value)" class="w-full yc-range" /></div><div><span>Saturation</span><input type="range" min="0" max="200" value="${clip.adj.s}" oninput="updateAdj('s',this.value)" class="w-full yc-range" /></div></div>`;
       } else if (toolId === 'fx') {
-        title.textContent = 'FX & Particle Overlays';
+        title.textContent = 'Hold Effect to Apply Live on Video!';
+        const list = FX_CATEGORIES[state.fxCat] || FX_CATEGORIES.glitch;
         body.innerHTML = `
-          <div class="flex gap-2 overflow-x-auto yc-scroll py-1">${clip ? FX_PRESETS.map(f => `<button type="button" onclick="applyClipFx('${f.id}')" class="px-2.5 py-1 rounded border text-[11px] font-semibold flex-shrink-0 ${clip.fx === f.id ? 'border-[#ff5722] bg-orange-50 text-[#ff5722]' : 'border-gray-200 bg-white'}">${f.name}</button>`).join('') : ''}</div>
-          <div class="flex gap-1.5 overflow-x-auto yc-scroll pt-1 text-[10.5px]">
-            <span class="font-bold text-gray-500 self-center mr-1">Particles:</span>
-            ${['none','rain','snow','sparkle','hearts'].map(p => `<button type="button" onclick="setParticles('${p}')" class="px-2.5 py-1 rounded border capitalize flex-shrink-0 ${state.particles===p?'border-[#ff5722] bg-orange-50 text-[#ff5722] font-bold':'border-gray-200 bg-white'}">${p}</button>`).join('')}
+          <div class="flex items-center justify-between gap-2 border-b border-gray-200 pb-1">
+            <div class="flex gap-3 text-[10px] font-extrabold uppercase overflow-x-auto yc-scroll">
+              ${[['glitch','Glitch'],['beat','Beat'],['mirror','Mirror'],['retro','Retro']].map(([k,lbl]) => `
+                <button type="button" onclick="state.fxCat='${k}';openTool('fx')" class="${state.fxCat===k?'text-[#ff5722] border-b-2 border-[#ff5722]':'text-gray-400'} pb-0.5 flex-shrink-0">${lbl}</button>
+              `).join('')}
+            </div>
+            ${state.fxBlocks.length ? `<button type="button" onclick="clearLastFxBlock()" class="text-[10px] font-bold text-red-500 flex-shrink-0">Undo FX</button>` : ''}
+          </div>
+          <div class="text-[9.5px] font-semibold text-[#ff5722]">Press &amp; HOLD any effect below — it applies for as long as you hold!</div>
+          <div class="flex gap-2 overflow-x-auto yc-scroll py-0.5">
+            ${clip ? list.map(f => `
+              <button type="button"
+                onpointerdown="startHoldFx('${f.id}','${f.name}','${f.col}',event)"
+                onpointerup="stopHoldFx()" onpointerleave="stopHoldFx()" onpointercancel="stopHoldFx()"
+                class="w-15 min-w-[58px] flex-shrink-0 rounded-lg overflow-hidden border-2 border-gray-200 active:border-[#ff5722] active:scale-95 transition bg-white touch-none select-none">
+                <div style="background:${f.col}" class="h-8 flex items-center justify-center text-white text-xs"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <div class="bg-[#ff5722] text-white text-[8.5px] font-bold py-0.5 truncate px-1">${f.name}</div>
+              </button>
+            `).join('') : '<span class="text-gray-500">Add a video or photo first.</span>'}
+          </div>
+          <div class="flex gap-1.5 overflow-x-auto yc-scroll text-[10px]">
+            <span class="font-bold text-gray-500 self-center mr-1">Magic:</span>
+            ${['none','rain','snow','sparkle','hearts'].map(p => `<button type="button" onclick="setParticles('${p}')" class="px-2 py-0.5 rounded border capitalize flex-shrink-0 ${state.particles===p?'border-[#ff5722] bg-orange-50 text-[#ff5722] font-bold':'border-gray-200 bg-white'}">${p}</button>`).join('')}
           </div>`;
+      } else if (toolId === 'templates') {
+        title.textContent = '1-Tap Templates & AI Auto Reel';
+        body.innerHTML = `<div class="flex gap-2 overflow-x-auto yc-scroll py-1"><button type="button" onclick="runAutoReelMaker()" class="w-16 flex-shrink-0 rounded-lg overflow-hidden border-2 border-[#ff5722] bg-orange-50 shadow-sm"><div class="h-9 bg-gradient-to-tr from-[#ff5722] to-amber-400 flex items-center justify-center text-white text-xs font-black"><i class="fa-solid fa-wand-sparkles"></i></div><div class="text-[9px] font-extrabold text-[#ff5722] py-1 truncate px-0.5">Auto Reel</div></button>` + STYLE_TEMPLATES.map(t => `<button type="button" onclick="applyStyleTemplate('${t.id}')" class="w-16 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm"><div style="background:${t.col}" class="h-9 flex items-center justify-center text-white text-xs font-black"><i class="fa-solid fa-clapperboard"></i></div><div class="text-[9px] font-bold text-gray-800 py-1 truncate px-1">${t.name}</div></button>`).join('') + `</div>`;
+      } else if (false) {
+        body.innerHTML = `<div class="flex gap-2 overflow-x-auto yc-scroll py-1">` + STYLE_TEMPLATES.map(t => `
+          <button type="button" onclick="applyStyleTemplate('${t.id}')" class="w-16 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm">
+            <div style="background:${t.col}" class="h-9 flex items-center justify-center text-white text-xs font-black"><i class="fa-solid fa-clapperboard"></i></div>
+            <div class="text-[9px] font-bold text-gray-800 py-1 truncate px-1">${t.name}</div>
+          </button>
+        `).join('') + `</div>`;
       } else if (toolId === 'layout') {
         title.textContent = 'Split-Screen / Collage';
         body.innerHTML = `<div class="flex gap-2">${[['single','Single'],['side2','2-Side'],['top2','2-Stack']].map(([id,lbl]) => `<button type="button" onclick="state.splitLayout='${id}';openTool('layout');drawFrame()" class="flex-1 py-1.5 rounded-lg border text-xs font-semibold ${state.splitLayout===id?'border-[#ff5722] bg-orange-50 text-[#ff5722]':'border-gray-200 bg-white'}">${lbl}</button>`).join('')}</div>`;
@@ -1301,6 +1483,8 @@
             <button type="button" onclick="addIntroOutroCard('intro')" class="px-2.5 py-1 rounded border border-gray-200 bg-white font-semibold">+ Intro Card</button>
             <button type="button" onclick="addIntroOutroCard('outro')" class="px-2.5 py-1 rounded border border-gray-200 bg-white font-semibold">+ Outro Card</button>
             <button type="button" onclick="setWatermarkPrompt()" class="px-2.5 py-1 rounded border border-gray-200 bg-white font-semibold">Watermark</button>
+            <button type="button" onclick="state.spectrumBars=!state.spectrumBars;openTool('frame');drawFrame()" class="px-2.5 py-1 rounded border font-semibold ${state.spectrumBars?'border-[#ff5722] bg-orange-50 text-[#ff5722]':'border-gray-200 bg-white'}">Spectrum Bars</button>
+            <button type="button" onclick="addNetflixIntro()" class="px-2.5 py-1 rounded border border-gray-200 bg-white font-semibold">+ Movie Intro</button>
           </div>`;
       } else if (toolId === 'tools') {
         title.textContent = 'Project Backup & Reset';
@@ -1314,8 +1498,12 @@
             <button type="button" onclick="quickResetProject()" class="px-3 py-2 rounded-lg bg-red-50 text-red-600 font-bold text-xs">Reset</button>
           </div>`;
       } else if (toolId === 'speed' && clip) {
-        title.textContent = 'Speed';
-        body.innerHTML = `<div class="flex items-center gap-3"><input type="range" min="0.5" max="3" step="0.25" value="${clip.speed}" oninput="updateClipSpeed(this.value)" class="flex-1 yc-range" /><span id="ycSpeedVal" class="font-bold text-[#ff5722] w-10 text-right">${clip.speed}x</span></div>`;
+        title.textContent = 'Speed & Speed Ramp';
+        body.innerHTML = `
+          <div class="flex items-center gap-3 mb-1.5"><input type="range" min="0.5" max="3" step="0.25" value="${clip.speed}" oninput="updateClipSpeed(this.value)" class="flex-1 yc-range" /><span id="ycSpeedVal" class="font-bold text-[#ff5722] w-10 text-right">${clip.speed}x</span></div>
+          <div class="flex gap-1.5 text-[10px]">
+            ${[['none','Normal'],['montage','Montage'],['hero','Hero Slow-Mo'],['jump','Jump Cut']].map(([id,lbl]) => `<button type="button" onclick="setSpeedRamp('${id}')" class="px-2 py-1 rounded border font-semibold ${(clip.speedRamp||'none')===id?'border-[#ff5722] text-[#ff5722] bg-orange-50':'bg-white border-gray-200'}">${lbl}</button>`).join('')}
+          </div>`;
       } else if (toolId === 'volume' && clip) {
         title.textContent = 'Clip Volume';
         body.innerHTML = `<div class="flex items-center gap-3"><input type="range" min="0" max="2" step="0.1" value="${clip.volume}" oninput="updateClipVolume(this.value)" class="flex-1 yc-range" /><span id="ycVolVal" class="font-bold text-[#ff5722] w-10 text-right">${Math.round(clip.volume * 100)}%</span></div>`;
@@ -1373,6 +1561,50 @@
       c.panX = 0; c.panY = 0;
       openTool('crop'); drawFrame();
     }
+    function addFlagMarker() {
+      state.flagMarkers.push(+state.playhead.toFixed(2));
+      renderTimeline();
+      showToast('🚩 Flag Marker at ' + fmtTime(state.playhead));
+    }
+    function setSpeedRamp(mode) {
+      const c = getActiveClip(); if (!c) return;
+      saveSnapshot(); c.speedRamp = mode; openTool('speed');
+      showToast('Speed Ramp: ' + mode);
+    }
+    function addCountdownOverlay() {
+      saveSnapshot();
+      const ov = { id: 'ov_' + Date.now(), kind: 'countdown', text: '3-2-1 Timer', color: '#ffffff', x: canvas.width/2, y: canvas.height/2, size: 110, startAt: state.playhead, duration: 3 };
+      state.overlays.push(ov); state.selectedOverlayId = ov.id;
+      recomputeDuration(); renderTimeline(); drawFrame();
+      showToast('Added 3.. 2.. 1.. Countdown!');
+    }
+    function addNetflixIntro() {
+      const c = document.createElement('canvas'); c.width = 540; c.height = 960;
+      const g = c.getContext('2d'); g.fillStyle = '#000000'; g.fillRect(0, 0, 540, 960);
+      g.fillStyle = '#e50914'; g.font = '900 38px sans-serif'; g.textAlign = 'center'; g.fillText('YUGACUT ORIGINALS', 270, 455);
+      g.fillStyle = '#d1d5db'; g.font = 'bold 18px sans-serif'; g.fillText('A YugaCut Studio Film', 270, 505);
+      const url = c.toDataURL('image/png'), img = new Image(); img.src = url;
+      img.onload = () => {
+        saveSnapshot();
+        state.clips.unshift({ id: 'clip_' + Date.now(), type: 'image', name: 'Movie Intro', url, mediaEl: img, duration: 2.5, trimStart: 0, trimEnd: 2.5, speed: 1, volume: 1, rotate: 0, flipH: false, flipV: false, cropScale: 1, panX: 0, panY: 0, tilt: 0, reverse: false, kenBurns: true, filter: 'none', fx: 'none', adj: { b: 100, c: 100, s: 100 }, transitionAfter: 'fade', thumbs: [url] });
+        recomputeDuration(); renderTimeline(); drawFrame(); showToast('Added Netflix Movie Intro!');
+      };
+    }
+    function runAutoReelMaker() {
+      if (!state.clips.length) { showToast('Add 2+ photos or videos first!'); return; }
+      saveSnapshot();
+      const trs = ['fade', 'slideLeft', 'zoomIn', 'flashWhite'];
+      state.clips.forEach((c, i) => {
+        if (c.type === 'image') { c.duration = 2.2; c.trimEnd = 2.2; c.kenBurns = true; }
+        c.transitionAfter = trs[i % trs.length];
+        c.filter = 'vivid';
+      });
+      state.bgMode = 'blur';
+      state.progressBar = true;
+      state.spectrumBars = true;
+      recomputeDuration(); renderTimeline(); drawFrame();
+      showToast('✨ Auto Reel Ready! Tap Play to preview.');
+    }
     function setQuickZoom(z) { const c = getActiveClip(); if (c) { c.cropScale = z; openTool('crop'); drawFrame(); } }
     function resetClipCrop() { const c = getActiveClip(); if (c) { c.cropScale = 1; c.panX = 0; c.panY = 0; openTool('crop'); drawFrame(); } }
     function updateCropProp(p, v) { const c = getActiveClip(); if (c) { c[p] = parseFloat(v); drawFrame(); } }
@@ -1399,6 +1631,40 @@
     }
     function applyClipFilter(id) { const c = getActiveClip(); if (c) { saveSnapshot(); c.filter = id; openTool('filter'); drawFrame(); } }
     function applyClipFx(id) { const c = getActiveClip(); if (c) { saveSnapshot(); c.fx = id; openTool('fx'); drawFrame(); } }
+    function startHoldFx(fxId, name, col, ev) {
+      if (ev) ev.preventDefault();
+      if (!state.clips.length) { showToast('Add a video or photo first.'); return; }
+      if (state.playhead >= state.totalDuration) state.playhead = 0;
+      state.holdingFx = { fxId, name, col, startAt: state.playhead };
+      if (!state.isPlaying) startPlayback();
+    }
+    function stopHoldFx() {
+      if (!state.holdingFx) return;
+      const h = state.holdingFx;
+      state.holdingFx = null;
+      pausePlayback();
+      const dur = Math.max(1.2, +(state.playhead - h.startAt).toFixed(2));
+      saveSnapshot();
+      state.fxBlocks.push({ id: 'fxb_' + Date.now(), fxId: h.fxId, name: h.name, col: h.col, startAt: h.startAt, duration: dur });
+      renderTimeline(); drawFrame();
+      showToast(`Applied ${h.name} (${dur.toFixed(1)}s)!`);
+    }
+    function clearLastFxBlock() {
+      if (!state.fxBlocks.length) return;
+      saveSnapshot(); state.fxBlocks.pop(); renderTimeline(); drawFrame();
+    }
+    function deleteFxBlock(id, ev) {
+      if (ev) ev.stopPropagation();
+      saveSnapshot(); state.fxBlocks = state.fxBlocks.filter(x => x.id !== id); renderTimeline(); drawFrame();
+    }
+    function applyStyleTemplate(id) {
+      const t = STYLE_TEMPLATES.find(x => x.id === id);
+      const c = getActiveClip();
+      if (!t || !c) { showToast('Add a video or photo first.'); return; }
+      saveSnapshot();
+      c.filter = t.filter; c.fx = t.fx; state.bgMode = t.bg; state.particles = t.part; state.progressBar = !!t.bar;
+      drawFrame(); showToast('Applied Template: ' + t.name);
+    }
     function setParticles(p) { state.particles = p; openTool('fx'); drawFrame(); }
     function updateAdj(k, v) { const c = getActiveClip(); if (c) { c.adj[k] = parseInt(v, 10); drawFrame(); } }
     function setBgMode(m) { state.bgMode = m; openTool('frame'); drawFrame(); }
@@ -1721,7 +1987,7 @@
         if (c.type !== 'video') return;
         const v = c.mediaEl;
         if (info && info.clip.id === c.id) {
-          v.muted = state.mutedGlobal; v.volume = Math.min(1, c.volume ?? 1); v.playbackRate = c.speed || 1;
+          v.muted = state.mutedGlobal; v.volume = Math.min(1, c.volume ?? 1); let rSp = c.speed || 1; if (c.speedRamp === 'hero') rSp *= (info.localOffset > info.clipDur*0.3 && info.localOffset < info.clipDur*0.7 ? 0.5 : 1.5); else if (c.speedRamp === 'montage') rSp *= (info.localOffset < info.clipDur*0.4 ? 1.6 : 0.8); v.playbackRate = Math.max(0.25, Math.min(3.5, rSp));
           const target = c.trimStart + info.localOffset * c.speed;
           if (c.reverse) {
             v.pause(); v.currentTime = Math.max(c.trimStart, c.trimEnd - info.localOffset * c.speed);
@@ -1745,6 +2011,8 @@
         const el = a.audioEl; if (!el) return;
         if (inRange) {
           const elapsed = state.playhead - a.startAt; let vol = a.volume ?? 1;
+          const hasVoice = state.autoDucking && !a.name.startsWith('Voiceover') && state.audioClips.some(v => v.id !== a.id && v.name.startsWith('Voiceover') && state.playhead >= v.startAt && state.playhead <= v.startAt + (v.trimEnd - v.trimStart));
+          if (hasVoice) vol *= 0.28;
           if (a.fadeIn && elapsed < 0.8) vol *= (elapsed / 0.8);
           if (a.fadeOut && dur - elapsed < 0.8) vol *= Math.max(0, (dur - elapsed) / 0.8);
           el.volume = Math.min(1, Math.max(0, vol)); el.playbackRate = sp;
@@ -1800,24 +2068,65 @@
               else if (prev.transitionAfter === 'glitch') tx = (Math.random() - 0.5) * 30;
             }
             if (c.kenBurns) zoomFx *= 1 + (info.localOffset / Math.max(1, info.clipDur)) * 0.16;
-            if (c.fx === 'zoom') zoomFx *= 1 + (info.localOffset / Math.max(1, info.clipDur)) * 0.14;
-            else if (c.fx === 'beatZoom') zoomFx *= 1 + Math.abs(Math.sin(state.playhead * 6.5)) * 0.07;
-            else if (c.fx === 'shake') tx += Math.sin(state.playhead * 40) * 6;
+            const timedFx = state.holdingFx ? state.holdingFx.fxId : (state.fxBlocks.find(b => state.playhead >= b.startAt && state.playhead <= b.startAt + b.duration)?.fxId || null);
+            const activeFx = timedFx || c.fx;
+            let rotFx = 0;
+            if (activeFx === 'zoom') zoomFx *= 1 + (info.localOffset / Math.max(1, info.clipDur)) * 0.14;
+            else if (activeFx === 'beatZoom') zoomFx *= 1 + Math.abs(Math.sin(state.playhead * 6.5)) * 0.07;
+            else if (activeFx === 'heartbeat') zoomFx *= 1 + Math.pow(Math.abs(Math.sin(state.playhead * 4.5)), 4) * 0.14;
+            else if (activeFx === 'vortex') { zoomFx *= 1.08; rotFx = Math.sin(state.playhead * 3) * 0.08; }
+            else if (activeFx === 'shake') tx += Math.sin(state.playhead * 40) * 8;
 
             ctx.globalAlpha = alpha;
             ctx.translate(canvas.width/2 + tx + (c.panX||0), canvas.height/2 + (c.panY||0));
-            ctx.rotate(((c.rotate || 0) * Math.PI) / 180);
+            ctx.rotate(((c.rotate || 0) * Math.PI) / 180 + rotFx);
+            if (c.tilt) ctx.transform(1, (c.tilt * 0.01), 0, 1, 0, 0);
+            if (activeFx === 'trail') ctx.globalAlpha *= 0.78;
             ctx.scale((c.flipH ? -1 : 1) * (c.cropScale || 1) * zoomFx, (c.flipV ? -1 : 1) * (c.cropScale || 1) * zoomFx);
             const scale = Math.min(canvas.width / vw, canvas.height / vh);
             ctx.drawImage(el, -(vw * scale)/2, -(vh * scale)/2, vw * scale, vh * scale);
             ctx.restore();
 
-            if (c.fx === 'vignette') {
+            if (activeFx === 'lightning') {
+              if (Math.sin(state.playhead * 19) > 0.78) { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+            } else if (activeFx === 'cyberRgb') {
+              ctx.fillStyle = 'rgba(236,72,153,0.16)'; ctx.fillRect(-10, 0, canvas.width, canvas.height);
+              ctx.fillStyle = 'rgba(6,182,212,0.16)'; ctx.fillRect(10, 0, canvas.width, canvas.height);
+              ctx.fillStyle = 'rgba(0,0,0,0.18)'; for (let y=0;y<canvas.height;y+=6) ctx.fillRect(0,y,canvas.width,2);
+            } else if (activeFx === 'prism') {
+              const g = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+              g.addColorStop(0,'rgba(255,0,128,0.18)'); g.addColorStop(0.5,'rgba(0,255,255,0.12)'); g.addColorStop(1,'rgba(255,200,0,0.18)');
+              ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+            } else if (activeFx === 'filmBurn') {
+              const g = ctx.createRadialGradient(canvas.width*0.15, canvas.height*0.15, 10, canvas.width*0.2, canvas.height*0.2, canvas.width*0.75);
+              g.addColorStop(0,'rgba(255,115,0,0.45)'); g.addColorStop(1,'rgba(255,115,0,0)');
+              ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+            } else if (activeFx === 'vignette') {
               const g = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width*0.2, canvas.width/2, canvas.height/2, canvas.width*0.8);
               g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.65)');
               ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            } else if (c.fx === 'flash' && Math.sin(state.playhead * 14) > 0.85) {
+            } else if (activeFx === 'flash' && Math.sin(state.playhead * 14) > 0.85) {
               ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else if (activeFx === 'glitchRgb' || activeFx === 'vhsGlitch' || activeFx === 'shadowRgb') {
+              ctx.fillStyle = activeFx === 'shadowRgb' ? 'rgba(6,182,212,0.16)' : 'rgba(239,68,68,0.14)';
+              ctx.fillRect((Math.sin(state.playhead*30)*10), 0, canvas.width, canvas.height);
+              ctx.fillStyle = 'rgba(59,130,246,0.12)';
+              ctx.fillRect((-Math.sin(state.playhead*30)*10), 0, canvas.width, canvas.height);
+            } else if (activeFx === 'vhs' || activeFx === 'badTv' || activeFx === 'glitchLine') {
+              ctx.fillStyle = 'rgba(0,0,0,0.22)';
+              for (let y = 0; y < canvas.height; y += 8) ctx.fillRect(0, y, canvas.width, 2);
+              if (activeFx === 'glitchLine' || activeFx === 'badTv') {
+                const gy = ((state.playhead * 220) % canvas.height);
+                ctx.fillStyle = 'rgba(255,255,255,0.35)';
+                ctx.fillRect(0, gy, canvas.width, 10);
+              }
+            } else if (activeFx === 'mirrorH') {
+              ctx.drawImage(canvas, 0, 0, canvas.width/2, canvas.height, canvas.width, 0, -canvas.width/2, canvas.height);
+            } else if (activeFx === 'mirrorV') {
+              ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height/2, 0, canvas.height, canvas.width, -canvas.height/2);
+            } else if (activeFx === 'mirror4') {
+              ctx.drawImage(canvas, 0, 0, canvas.width/2, canvas.height/2, canvas.width, 0, -canvas.width/2, canvas.height/2);
+              ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height/2, 0, canvas.height, canvas.width, -canvas.height/2);
             }
           }
         }
@@ -1921,6 +2230,18 @@
           }
           ctx.restore();
         }
+      }
+
+      // Live Music Spectrum Bars
+      if (state.spectrumBars) {
+        ctx.save();
+        const bars = 24, bw = (canvas.width - 40) / bars;
+        for (let i = 0; i < bars; i++) {
+          const h = 10 + Math.abs(Math.sin(state.playhead * 9 + i * 0.7)) * 44;
+          ctx.fillStyle = i % 2 === 0 ? '#ff5722' : '#fbbf24';
+          ctx.fillRect(20 + i * bw, canvas.height - 22 - h, Math.max(4, bw - 4), h);
+        }
+        ctx.restore();
       }
 
       // Reels Progress Bar
