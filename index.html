@@ -711,7 +711,7 @@
               reverse: !!c.reverse, volume: c.volume, filter: c.filter, zoom: c.zoom,
               panX: c.panX, panY: c.panY, tilt3d: c.tilt3d, rotate: c.rotate,
               flipH: !!c.flipH, flipV: !!c.flipV, transitionAfter: c.transitionAfter,
-              thumbs: (c.thumbs || []).slice(0, 4)
+              thumbs: (c.thumbs || []).filter(t => typeof t === 'string' && t.startsWith('data:')).slice(0, 4)
             });
           }
           const audioMeta = [];
@@ -856,17 +856,38 @@
             if (!blob) continue;
             const url = URL.createObjectURL(blob);
             let mediaEl = null;
+            let thumbs = Array.isArray(cm.thumbs) ? cm.thumbs.filter(t => typeof t === 'string' && t.startsWith('data:')) : [];
             if (cm.type === 'video') {
               mediaEl = document.createElement('video');
-              mediaEl.src = url; mediaEl.playsInline = true; mediaEl.preload = 'auto';
-              await new Promise(r => { mediaEl.onloadedmetadata = r; mediaEl.onerror = r; setTimeout(r, 2500); });
-              mediaEl.currentTime = cm.trimStart || 0;
-              await new Promise(r => { mediaEl.onseeked = r; setTimeout(r, 400); });
+              mediaEl.muted = true; mediaEl.playsInline = true; mediaEl.preload = 'auto';
+              mediaEl.src = url;
+              mediaEl.load();
+              await new Promise(r => {
+                const done = () => r();
+                mediaEl.addEventListener('loadeddata', done, { once: true });
+                mediaEl.addEventListener('error', done, { once: true });
+                setTimeout(done, 3500);
+              });
+              const seekTarget = Math.max(0.01, cm.trimStart || 0);
+              if (mediaEl.readyState >= 1) {
+                mediaEl.currentTime = seekTarget;
+                await new Promise(r => {
+                  mediaEl.addEventListener('seeked', () => r(), { once: true });
+                  setTimeout(r, 600);
+                });
+              }
             } else {
               mediaEl = new Image(); mediaEl.src = url;
-              await new Promise(r => { mediaEl.onload = r; mediaEl.onerror = r; setTimeout(r, 1500); });
+              await new Promise(r => {
+                mediaEl.onload = r; mediaEl.onerror = r; setTimeout(r, 2000);
+              });
+              thumbs = [url];
             }
-            state.clips.push({ ...cm, url, file: blob, mediaEl });
+            const restoredClip = { ...cm, url, file: blob, mediaEl, thumbs };
+            state.clips.push(restoredClip);
+            if (cm.type === 'video' && !thumbs.length) {
+              extractVideoThumbs(restoredClip);
+            }
           }
           if (state.clips.length) state.selectedClipId = state.clips[0].id;
         }
@@ -2963,8 +2984,8 @@
       window.addEventListener('keydown', (e) => {
         const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) return;
-        const editorEl = document.getElementById('ycEditorView');
-        if (!editorEl || editorEl.classList.contains('hidden')) return;
+        const homeEl = document.getElementById('ycHomeScreen');
+        if (homeEl && !homeEl.classList.contains('hidden')) return;
         if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
         else if (e.code === 'ArrowLeft') { e.preventDefault(); seekTo(state.playhead - (e.shiftKey ? 1 : 0.1), true); }
         else if (e.code === 'ArrowRight') { e.preventDefault(); seekTo(state.playhead + (e.shiftKey ? 1 : 0.1), true); }
