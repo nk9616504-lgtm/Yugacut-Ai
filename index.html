@@ -1167,9 +1167,10 @@
       document.getElementById('ycCurrentTime').textContent = fmtTime(sec);
       const info = getClipAtTime(sec);
       if (info && info.clip.type === 'video') {
-        const v = info.clip.mediaEl;
-        const target = info.clip.trimStart + info.localOffset * info.clip.speed;
-        if (Math.abs(v.currentTime - target) > 0.04) { v.currentTime = target; v.onseeked = () => drawFrame(); }
+        const v = info.clip.mediaEl, c = info.clip;
+        const off = c.reverse ? (info.clipDur - info.localOffset) : info.localOffset;
+        const target = c.trimStart + off * (c.speed || 1);
+        if (!v.seeking && Math.abs(v.currentTime - target) > 0.04) { v.currentTime = target; v.onseeked = () => drawFrame(); }
       }
       drawFrame();
     }
@@ -1400,7 +1401,7 @@
           ['audioCopy', 'fa-copy', 'Copy'],
           ['audioDelete', 'fa-trash', 'Delete']
         ];
-        row.innerHTML = items.map(([id, icon, label]) => `<button type="button" onclick="handleToolClick('${id}')" class="yc-tool-btn ${state.activeTool === id ? 'active' : ''}"><i class="fa-solid ${icon}"></i><span>${label}</span></button>`).join('');
+        row.innerHTML = items.map(([id, icon, label]) => `<button type="button" onclick="handleToolClick('${id}')" class="yc-tool-btn ${(state.activeTool === id || (id === 'audioDuck' && state.autoDucking)) ? 'active' : ''}"><i class="fa-solid ${icon}"></i><span>${label}</span></button>`).join('');
         return;
       }
       if (state.selectedClipId) {
@@ -1422,7 +1423,8 @@
           ['duplicate', 'fa-copy', 'Copy'],
           ['deleteClip', 'fa-trash', 'Delete']
         ];
-        row.innerHTML = items.map(([id, icon, label]) => `<button type="button" onclick="handleToolClick('${id}')" class="yc-tool-btn ${state.activeTool === id ? 'active' : ''}"><i class="fa-solid ${icon}"></i><span>${label}</span></button>`).join('');
+        const selClipObj = state.clips.find(c => c.id === state.selectedClipId);
+        row.innerHTML = items.map(([id, icon, label]) => `<button type="button" onclick="handleToolClick('${id}')" class="yc-tool-btn ${(state.activeTool === id || (id === 'reverse' && selClipObj && selClipObj.reverse)) ? 'active' : ''}"><i class="fa-solid ${icon}"></i><span>${label}</span></button>`).join('');
         return;
       }
 
@@ -1829,7 +1831,16 @@
     function setQuickZoom(z) { const c = getActiveClip(); if (c) { c.cropScale = z; openTool('crop'); drawFrame(); } }
     function resetClipCrop() { const c = getActiveClip(); if (c) { c.cropScale = 1; c.panX = 0; c.panY = 0; openTool('crop'); drawFrame(); } }
     function updateCropProp(p, v) { const c = getActiveClip(); if (c) { c[p] = parseFloat(v); drawFrame(); } }
-    function toggleReverseClip() { const c = getActiveClip(); if (c) { c.reverse = !c.reverse; showToast(c.reverse ? 'Reverse Playback ON' : 'Reverse OFF'); drawFrame(); } }
+    function toggleReverseClip() {
+      const c = getActiveClip(); if (!c) return;
+      if (c.type !== 'video') { showToast('Reverse works on video clips.'); return; }
+      saveSnapshot();
+      c.reverse = !c.reverse;
+      renderToolbar();
+      seekTo(state.playhead, false);
+      showToast(c.reverse ? 'Reverse Playback ON' : 'Reverse Playback OFF');
+      autoSaveDraft();
+    }
     function moveSelectedClip(dir) {
       const idx = state.clips.findIndex(c => c.id === state.selectedClipId);
       if (idx < 0) return;
@@ -1890,7 +1901,18 @@
     function updateAdj(k, v) { const c = getActiveClip(); if (c) { c.adj[k] = parseInt(v, 10); drawFrame(); } }
     function setBgMode(m) { state.bgMode = m; openTool('frame'); drawFrame(); }
     function toggleFlip(d) { const c = getActiveClip(); if (c) { saveSnapshot(); if (d === 'h') c.flipH = !c.flipH; else c.flipV = !c.flipV; drawFrame(); } }
-    function updateClipSpeed(v) { const c = getActiveClip(); if (c) { c.speed = parseFloat(v); document.getElementById('ycSpeedVal').textContent = c.speed + 'x'; recomputeDuration(); renderTimeline(); } }
+    function updateClipSpeed(v) {
+      const c = getActiveClip(); if (!c) return;
+      c.speed = Math.max(0.25, Math.min(3, parseFloat(v) || 1));
+      const lbl = document.getElementById('ycSpeedVal'); if (lbl) lbl.textContent = c.speed + 'x';
+      if (c.type === 'video' && c.mediaEl) c.mediaEl.playbackRate = c.speed;
+      recomputeDuration();
+      state.playhead = Math.min(state.playhead, state.totalDuration);
+      syncScrollToPlayhead();
+      renderTimeline();
+      drawFrame();
+      autoSaveDraft();
+    }
     function updateClipVolume(v) { const c = getActiveClip(); if (c) { c.volume = parseFloat(v); document.getElementById('ycVolVal').textContent = Math.round(c.volume * 100) + '%'; renderTimeline(); } }
     function rotateSelectedClip() { const c = getActiveClip(); if (c) { saveSnapshot(); c.rotate = ((c.rotate || 0) + 90) % 360; drawFrame(); } }
     function freezeFrameAtPlayhead() {
@@ -2208,12 +2230,23 @@
         if (c.type !== 'video') return;
         const v = c.mediaEl;
         if (info && info.clip.id === c.id) {
-          v.muted = state.mutedGlobal; v.volume = Math.min(1, c.volume ?? 1); let rSp = c.speed || 1; if (c.speedRamp === 'hero') rSp *= (info.localOffset > info.clipDur*0.3 && info.localOffset < info.clipDur*0.7 ? 0.5 : 1.5); else if (c.speedRamp === 'montage') rSp *= (info.localOffset < info.clipDur*0.4 ? 1.6 : 0.8); v.playbackRate = Math.max(0.25, Math.min(3.5, rSp));
-          const target = c.trimStart + info.localOffset * c.speed;
+          v.muted = state.mutedGlobal; v.volume = Math.min(1, c.volume ?? 1);
+          let rSp = c.speed || 1;
+          if (c.speedRamp === 'hero') rSp *= (info.localOffset > info.clipDur*0.3 && info.localOffset < info.clipDur*0.7 ? 0.5 : 1.5);
+          else if (c.speedRamp === 'montage') rSp *= (info.localOffset < info.clipDur*0.4 ? 1.6 : 0.8);
+          else if (c.speedRamp === 'jump') rSp *= (Math.floor(info.localOffset * 2) % 2 === 0 ? 1.8 : 0.75);
+          v.playbackRate = Math.max(0.25, Math.min(3.5, rSp));
           if (c.reverse) {
-            v.pause(); v.currentTime = Math.max(c.trimStart, c.trimEnd - info.localOffset * c.speed);
+            if (!v.paused) v.pause();
+            const revTarget = Math.max(c.trimStart, c.trimEnd - info.localOffset * (c.speed || 1));
+            if (!v.seeking && Math.abs(v.currentTime - revTarget) > 0.04) {
+              v.currentTime = revTarget;
+            }
           } else {
-            if (Math.abs(v.currentTime - target) > 0.35) v.currentTime = target;
+            const target = c.trimStart + info.localOffset * (c.speed || 1);
+            if (!c.speedRamp || c.speedRamp === 'none') {
+              if (!v.seeking && Math.abs(v.currentTime - target) > 0.35) v.currentTime = target;
+            }
             if (v.paused) v.play().catch(() => {});
           }
         } else if (!v.paused) v.pause();
@@ -2758,7 +2791,14 @@
     function updateTimelineAudioTrim(w, v) { const ac = state.audioClips.find(a => a.id === state.selectedAudioId); if (!ac) return; if (w === 'start') ac.trimStart = Math.min(parseFloat(v), ac.trimEnd - 0.2); else ac.trimEnd = Math.max(parseFloat(v), ac.trimStart + 0.2); recomputeDuration(); renderTimeline(); openTool('audioTrim'); }
     function updateSelectedAudioVol(v) { const ac = state.audioClips.find(a => a.id === state.selectedAudioId); if (ac) ac.volume = parseFloat(v); }
     function toggleAudioFade(w) { const ac = state.audioClips.find(a => a.id === state.selectedAudioId); if (ac) { if (w === 'in') ac.fadeIn = !ac.fadeIn; else ac.fadeOut = !ac.fadeOut; openTool('audioFade'); } }
-    function setAudioEq(eq) { const ac = state.audioClips.find(a => a.id === state.selectedAudioId); if (ac) { ac.eq = eq; openTool('audioEq'); showToast('EQ: ' + eq); } }
+    function setAudioEq(eq) {
+      const ac = state.audioClips.find(a => a.id === state.selectedAudioId);
+      if (ac) {
+        ac.eq = eq;
+        state.audioEq = eq === 'voice' ? 'vocal' : eq === 'bright' ? 'treble' : eq === 'bass' ? 'bass' : 'flat';
+        openTool('audioEq'); showToast('EQ: ' + eq); autoSaveDraft();
+      }
+    }
     function updateSelectedAudioSpeed(v) { const ac = state.audioClips.find(a => a.id === state.selectedAudioId); if (ac) { ac.speed = parseFloat(v); recomputeDuration(); renderTimeline(); } }
     function splitSelectedAudioAtPlayhead() {
       const ac = state.audioClips.find(a => a.id === state.selectedAudioId); if (!ac) return;
