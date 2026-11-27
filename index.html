@@ -486,6 +486,35 @@
     }
     function cloneClip(c, extra) { return Object.assign({}, c, { adj: Object.assign({}, c.adj), thumbs: [...(c.thumbs || [])] }, extra || {}); }
 
+    // ---- Reverse playback: pre-extract frames (seeking a <video> backwards every frame is too slow) ----
+    const revCache = new Map(); let revBuildingCount = 0, revDebounce = null;
+    function revKey(c) { return `${c.url}|${(+c.trimStart).toFixed(2)}|${(+c.trimEnd).toFixed(2)}`; }
+    async function ensureReverse(c) {
+      if (!c || c.type !== 'video' || !c.url) return;
+      const key = revKey(c); if (revCache.has(key)) return;
+      revBuildingCount++;
+      try {
+        const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = c.url;
+        await new Promise(r => { v.onloadeddata = r; v.onerror = r; setTimeout(r, 8000); });
+        const vw = v.videoWidth, vh = v.videoHeight; if (!vw || !vh) throw new Error('no video');
+        const span = Math.max(0.2, c.trimEnd - c.trimStart), budget = 150e6;
+        let fps = 15, n = Math.ceil(span * fps), scale = Math.min(1, Math.sqrt(budget / (n * 4 * vw * vh)));
+        if (scale < 0.45) { fps = 8; n = Math.ceil(span * fps); scale = Math.min(1, Math.sqrt(budget / (n * 4 * vw * vh))); }
+        scale = Math.min(scale, 960 / Math.max(vw, vh));
+        const w = Math.max(2, Math.round(vw * scale)), h = Math.max(2, Math.round(vh * scale));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d'), frames = [];
+        for (let i = 0; i < n; i++) {
+          v.currentTime = Math.min(c.trimEnd - 0.02, c.trimStart + i / fps);
+          await new Promise(r => { const f = () => { v.removeEventListener('seeked', f); r(); }; v.addEventListener('seeked', f); setTimeout(r, 800); });
+          g.drawImage(v, 0, 0, w, h); frames.push(await createImageBitmap(cv));
+          if (i % 5 === 0) showToast(`Preparing reverse... ${Math.round(i / n * 100)}%`);
+        }
+        while (revCache.size >= 3) revCache.delete(revCache.keys().next().value);
+        revCache.set(key, { frames, fps }); showToast('Reverse ready ✓ — press Play');
+      } catch (e) { showToast('Reverse preparation failed.'); }
+      finally { revBuildingCount--; }
+    }
+
     function applyCanvasSize() { canvas.width = Math.max(2, Math.round(VW * RS)); canvas.height = Math.max(2, Math.round(VH * RS)); }
     function setRenderScale(k) { RS = k; applyCanvasSize(); }
     function fitStage() {
@@ -567,6 +596,7 @@
       state.bgMode = d.bgMode || 'black'; state.splitLayout = d.splitLayout || 'single'; state.particles = d.particles || 'none';
       state.progressBar = !!d.progressBar; state.watermarkText = d.watermarkText || '';
       state.fxBlocks = d.fxBlocks || []; state.flagMarkers = d.flagMarkers || []; state.beatMarkers = d.beatMarkers || [];
+      state.clips.forEach(c => { if (c.reverse) ensureReverse(c); });
       if (!state.clips.some(c => c.id === state.selectedClipId)) state.selectedClipId = null;
       if (!state.audioClips.some(a => a.id === state.selectedAudioId)) state.selectedAudioId = null;
       if (!state.overlays.some(o => o.id === state.selectedOverlayId)) state.selectedOverlayId = null;
@@ -677,6 +707,7 @@
           const clip = makeClip(Object.assign({}, cm, { url, file: blob, mediaEl, thumbs }));
           clip.adj = Object.assign({ b: 100, c: 100, s: 100 }, cm.adj || {});
           state.clips.push(clip);
+          if (clip.reverse) ensureReverse(clip);
           if (cm.type === 'video' && thumbs.length < 2) extractVideoFilmstrip(clip, url);
         }
         if (state.clips.length) state.selectedClipId = null;
@@ -1209,6 +1240,7 @@
       if (which === 'start') { c.trimStart = Math.min(v, c.trimEnd - 0.2); $('ycTrimS').textContent = c.trimStart.toFixed(1) + 's'; }
       else { c.trimEnd = Math.max(v, c.trimStart + 0.2); $('ycTrimE').textContent = c.trimEnd.toFixed(1) + 's'; }
       recomputeDuration(); renderTimeline(); seekVideoElements(state.playhead); drawFrame(); autoSaveDraft();
+      if (c.reverse) { clearTimeout(revDebounce); revDebounce = setTimeout(() => ensureReverse(c), 500); }
     }
     function setClipFillZoom() {
       const c = getActiveClip(); if (!c || !c.mediaEl) return;
@@ -1256,7 +1288,8 @@
       const c = getActiveClip(); if (!c) return;
       if (c.type !== 'video') { showToast('Reverse works on video clips.'); return; }
       saveSnapshot(); c.reverse = !c.reverse; lastToolbarSig = ''; renderToolbar(); seekTo(state.playhead, false);
-      showToast(c.reverse ? 'Reverse Playback ON (video only)' : 'Reverse Playback OFF');
+      if (c.reverse) { showToast('Preparing reverse... please wait'); ensureReverse(c).then(() => drawFrame()); }
+      else showToast('Reverse Playback OFF');
     }
     function moveSelectedClip(dir) {
       const idx = state.clips.findIndex(c => c.id === state.selectedClipId), t = idx + dir;
@@ -1268,9 +1301,16 @@
       const { clip, localOffset, idx } = info, effDur = getClipEffectiveDur(clip);
       if (localOffset <= 0.15 || localOffset >= effDur - 0.15) { showToast('Move playhead inside clip to split.'); return; }
       saveSnapshot();
-      const cut = clip.trimStart + localOffset * (clip.speed || 1);
-      const second = cloneClip(clip, { id: uid('clip'), trimStart: cut, transitionAfter: clip.transitionAfter });
-      clip.trimEnd = cut; clip.transitionAfter = 'none'; state.clips.splice(idx + 1, 0, second);
+      const sp = clip.speed || 1; let second;
+      if (clip.reverse) {
+        const cut = clip.trimEnd - localOffset * sp;
+        second = cloneClip(clip, { id: uid('clip'), trimEnd: cut, transitionAfter: clip.transitionAfter }); clip.trimStart = cut;
+      } else {
+        const cut = clip.trimStart + localOffset * sp;
+        second = cloneClip(clip, { id: uid('clip'), trimStart: cut, transitionAfter: clip.transitionAfter }); clip.trimEnd = cut;
+      }
+      clip.transitionAfter = 'none'; state.clips.splice(idx + 1, 0, second);
+      if (clip.reverse) { ensureReverse(clip); ensureReverse(second); }
       recomputeDuration(); renderTimeline(); drawFrame();
     }
     function applyClipFilter(id) { const c = getActiveClip(); if (c) { saveSnapshot(); c.filter = id; openTool('filter'); drawFrame(); } }
@@ -1548,7 +1588,7 @@
       if (syncScroll) syncScrollToPlayhead();
       seekVideoElements(state.playhead); drawFrame();
     }
-    function togglePlay() { if (state.totalDuration <= 0) return; if (state.isPlaying) pausePlayback(); else startPlayback(); }
+    function togglePlay() { if (state.totalDuration <= 0) return; if (revBuildingCount > 0 && !state.isPlaying) { showToast('Reverse is still being prepared...'); return; } if (state.isPlaying) pausePlayback(); else startPlayback(); }
     function startPlayback() {
       if (state.playhead >= state.totalDuration) state.playhead = 0;
       state.isPlaying = true; $('ycPlayBtn').innerHTML = '<i class="fa-solid fa-pause text-sm"></i>';
@@ -1581,8 +1621,10 @@
           v.playbackRate = Math.max(0.25, Math.min(3.5, rSp));
           if (c.reverse) {
             if (!v.paused) v.pause();
-            const revTarget = Math.max(c.trimStart, c.trimEnd - info.localOffset * (c.speed || 1));
-            if (!v.seeking && Math.abs(v.currentTime - revTarget) > 0.04) v.currentTime = revTarget;
+            if (!revCache.has(revKey(c))) {
+              const revTarget = Math.max(c.trimStart, c.trimEnd - info.localOffset * (c.speed || 1));
+              if (!v.seeking && Math.abs(v.currentTime - revTarget) > 0.04) v.currentTime = revTarget;
+            }
           } else {
             const target = c.trimStart + info.localOffset * (c.speed || 1);
             if (!c.speedRamp || c.speedRamp === 'none') { if (!v.seeking && Math.abs(v.currentTime - target) > 0.35) v.currentTime = target; }
@@ -1725,8 +1767,12 @@
       } else {
         const info = getClipAtTime(state.playhead);
         if (info && info.clip.mediaEl) {
-          const c = info.clip, el = c.mediaEl;
-          const vw = el.videoWidth || el.naturalWidth || VW, vh = el.videoHeight || el.naturalHeight || VH;
+          const c = info.clip; let el = c.mediaEl;
+          if (c.reverse && c.type === 'video') {
+            const rc = revCache.get(revKey(c));
+            if (rc) { const si = Math.round(((c.trimEnd - info.localOffset * (c.speed || 1)) - c.trimStart) * rc.fps); el = rc.frames[Math.max(0, Math.min(rc.frames.length - 1, si))] || el; }
+          }
+          const vw = el.videoWidth || el.naturalWidth || el.width || VW, vh = el.videoHeight || el.naturalHeight || el.height || VH;
           if (vw > 0 && vh > 0) {
             if (state.bgMode === 'blur') {
               const ow = 90, oh = Math.max(40, Math.round(90 * VH / VW));
@@ -2122,6 +2168,7 @@
           }
         } catch (e) {}
 
+        for (const c of state.clips) { if (c.reverse && c.type === 'video') { status.textContent = 'Preparing reverse clips...'; await ensureReverse(c); } }
         status.textContent = 'Seeking clips...';
         for (const c of state.clips) {
           if (c.type === 'video' && c.mediaEl) {
