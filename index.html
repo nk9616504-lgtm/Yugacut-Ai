@@ -775,6 +775,7 @@
     async function deleteSavedDraft() {
       try { localStorage.removeItem('yugacut_draft_v1'); } catch (e) {}
       try { await idbClearAll(); } catch (e) {}
+      resetProjectState();
       if (localStorage.getItem('yugacut_pro_unlocked') === '1') { const b = document.getElementById('ycHomeProBadge'); if (b) b.innerHTML = '<i class="fa-solid fa-crown text-[10px]"></i> <span>Pro Active</span>'; }
       renderHomeDrafts();
       showToast('Draft & media cache deleted!');
@@ -802,6 +803,7 @@
     async function clearAppCacheNow() {
       try { localStorage.removeItem('yugacut_draft_v1'); } catch (e) {}
       try { await idbClearAll(); } catch (e) {}
+      resetProjectState();
       renderHomeDrafts(); showToast('Cache & Draft cleared!');
     }
     function openSettingsSub(which) {
@@ -935,7 +937,27 @@
     }
 
     // ==================== NAVIGATION ====================
+    function resetProjectState() {
+      try { pausePlayback(); } catch (e) {}
+      state.clips = [];
+      state.audioClips = [];
+      state.overlays = [];
+      state.fxBlocks = [];
+      state.flagMarkers = [];
+      state.beatMarkers = [];
+      state.selectedClipId = null;
+      state.selectedAudioId = null;
+      state.selectedOverlayId = null;
+      state.selectedTransitionIdx = null;
+      state.playhead = 0;
+      state.totalDuration = 0;
+      state.history = [];
+      state.future = [];
+      try { closeToolDrawer(); } catch (e) {}
+      try { recomputeDuration(); renderToolbar(); renderTimeline(); drawFrame(); } catch (e) {}
+    }
     function triggerNewProject() {
+      resetProjectState();
       document.getElementById('ycHomeScreen').classList.add('hidden');
       document.getElementById('ycMediaInput').click();
     }
